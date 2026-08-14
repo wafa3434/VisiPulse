@@ -4,6 +4,13 @@ import pandas as pd
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
+# تهيئة الذاكرة المؤقتة (Session State) لحفظ البلاغات الواردة بين شاشة الموظف وقسم الـ IT
+if "tickets" not in st.session_state:
+    st.session_state.tickets = [
+        {"رقم التذكرة": "TICK-101", "الجهاز": "DEV-101", "نوع العطل": "مادي (Hardware)", "الوصف": "تراجع أداء المكونات المادية", "الحالة": "قيد المعالجة"},
+        {"رقم التذكرة": "TICK-102", "الجهاز": "DEV-204", "نوع العطل": "تقني (Software)", "الوصف": "بطء استجابة النظام البرمجي", "الحالة": "جديد"}
+    ]
+
 # --- الترويسة العليا (شعار + ترجمة) ---
 header_col1, header_col2, header_col3 = st.columns([2, 5, 1])
 
@@ -31,10 +38,32 @@ tab_titles = ["شاشة الموظفين والتنبيهات", "بوابة ال
 tab1, tab2 = st.tabs(tab_titles)
 
 with tab1:
-    st.subheader("شاشة التنبيهات الاستباقية" if lang == "العربية (AR)" else "Proactive Alerts Screen")
+    st.subheader("شاشة التنبيهات الاستباقية وإرسال البلاغات" if lang == "العربية (AR)" else "Proactive Alerts & Ticket Submission Screen")
     st.warning("تنبيه استباقي (VisiPulse): تم رصد مؤشرات تراجع في أداء الجهاز (DEV-101)." if lang == "العربية (AR)" else "Proactive Alert: Performance degradation detected in (DEV-101).")
-    if st.button("تأكيد استلام التنبيه" if lang == "العربية (AR)" else "Confirm Receipt"):
-        st.success("تم التأكيد بنجاح ومنع تكدس البلاغات العشوائية." if lang == "العربية (AR)" else "Confirmed successfully.")
+    
+    st.markdown("---")
+    st.markdown("#### نموذج إرسال بلاغ عطل جديد إلى قسم الدعم الفني" if lang == "العربية (AR)" else "Submit New Fault Ticket to IT Support")
+    
+    with st.form("employee_ticket_form"):
+        emp_device = st.text_input("معرف الجهاز (Device ID):" if lang == "العربية (AR)" else "Device ID:")
+        fault_type = st.selectbox("حدد نوع العطل:" if lang == "العربية (AR)" else "Select Fault Type:", ["مادي (Hardware)", "تقني (Software)"])
+        fault_desc = st.text_area("وصف المشكلة:" if lang == "العربية (AR)" else "Issue Description:")
+        
+        submit_button = st.form_submit_button("إرسال البلاغ (Send)" if lang == "العربية (AR)" else "Send Ticket")
+        
+        if submit_button:
+            if emp_device and fault_desc:
+                new_ticket = {
+                    "رقم التذكرة": f"TICK-{len(st.session_state.tickets) + 101}",
+                    "الجهاز": emp_device,
+                    "نوع العطل": fault_type,
+                    "الوصف": fault_desc,
+                    "الحالة": "جديد (New)"
+                }
+                st.session_state.tickets.append(new_ticket)
+                st.success("تم إرسال البلاغ بنجاح إلى لوحة تحكم قسم الـ IT لتصنيفه استباقياً." if lang == "العربية (AR)" else "Ticket successfully sent to IT dashboard.")
+            else:
+                st.error("الرجاء تعبئة الحقول المطلوبة." if lang == "العربية (AR)" else "Please fill in the required fields.")
 
 with tab2:
     portal_label = "اختر البوابة:" if lang == "العربية (AR)" else "Choose Portal:"
@@ -93,7 +122,7 @@ with tab2:
                 med_data = pd.DataFrame({"سرعة الاستجابة (ms)": [120, 115, 130, 110, 105]}, index=["وحدة العناية", "الطوارئ", "العيادات", "الأشعة", "المختبر"])
                 st.line_chart(med_data)
 
-            # 3. الدعم الفني
+            # 3. الدعم الفني (مع استقبال البلاغات وتصنيفها مادي أو تقني، واسم الشركة المقاولة)
             elif "IT Support" in sub_tab or "الدعم الفني" in sub_tab:
                 st.markdown("### لوحة تحكم قسم الدعم الفني والتنبؤ بالأعطال")
                 st.info("الفكرة الاستباقية: تتبع دورة حياة الأجهزة والتنبؤ بالأعطال قبل وقوعها لخفض تكاليف الصيانة.")
@@ -101,15 +130,13 @@ with tab2:
                 contractor = st.text_input("أدخل اسم الشركة المقاولة للصيانة (ثم اضغط Enter):" if lang == "العربية (AR)" else "Enter Maintenance Contractor Name (Press Enter):")
                 
                 if contractor:
-                    st.success(f"تم ربط التذكرة وإرسالها تلقائياً إلى شركة الصيانة: {contractor}")
-                    st.markdown("#### جدول التذاكر الواردة لشركة الصيانة:")
-                    tickets_df = pd.DataFrame({
-                        "رقم التذكرة": ["TICK-501", "TICK-502"],
-                        "الجهاز": ["DEV-101", "DEV-204"],
-                        "الشركة المقاولة": [contractor, contractor],
-                        "الحالة": ["تم الإرسال والتحويل بنجاح", "قيد المعالجة الاستباقية"]
-                    })
-                    st.table(tickets_df)
+                    st.success(f"تم ربط التذاكر وإرسالها تلقائياً إلى شركة الصيانة: {contractor}")
+                
+                st.markdown("#### سجل البلاغات الواردة من الموظفين (تصنيف الأعطال: مادي / تقني):")
+                tickets_df = pd.DataFrame(st.session_state.tickets)
+                if contractor:
+                    tickets_df["الشركة المقاولة"] = contractor
+                st.table(tickets_df)
 
             # 4. الشبكات
             elif "Network" in sub_tab or "الشبكات" in sub_tab:
