@@ -1,108 +1,59 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
-# إعداد الصفحة وتصميم الواجهة
-st.set_page_config(
-    page_title="VisiPulse - Health Cluster Proactive System",
-    layout="wide"
-)
+# إعداد الصفحة
+st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
-# --- الترويسة العليا مع عرض الشعار وترجمة اللغات ---
+# --- الترويسة ---
 header_col1, header_col2, header_col3 = st.columns([1.5, 3.5, 1])
-
 with header_col1:
-    sub_col_logo, sub_col_text = st.columns([1, 2])
-    with sub_col_logo:
-        try:
-            st.image("logo.jpeg", width=65)
-        except:
-            st.write("VisiPulse")
-    with sub_col_text:
-        st.markdown("### **VisiPulse**")
-        st.caption("طبقة الذكاء الاستباقي" if "lang" not in locals() or lang == "العربية (AR)" else "Proactive Intelligence Layer")
-
-with header_col2:
-    pass
-
+    st.markdown("### **VisiPulse**")
 with header_col3:
     lang = st.selectbox("Language / اللغة", ["العربية (AR)", "English (EN)"])
 
 st.markdown("---")
 
-# تفعيل الترجمة لعنوان النظام الرئيسي
-if lang == "العربية (AR)":
-    header_col2.markdown("<h2 style='text-align: center; color: #1a5276;'>نظام مراقبة البنية التحتية والإنذار المبكر</h2>", unsafe_allow_html=True)
-    tab1_title = "شاشة الموظفين والتنبيهات"
-    tab2_title = "بوابة الدخول الخاصة (IT & الإدارة العليا)"
-else:
-    header_col2.markdown("<h2 style='text-align: center; color: #1a5276;'>Infrastructure Monitoring & Early Warning System</h2>", unsafe_allow_html=True)
-    tab1_title = "Employee Screen & Alerts"
-    tab2_title = "Secure Login Portal (IT & Upper Management)"
-
-# تبويبات النظام الرئيسية
-tab1, tab2 = st.tabs([tab1_title, tab2_title])
+tab1, tab2 = st.tabs(["شاشة الموظفين", "بوابة الإدارة والتقنية"])
 
 with tab1:
-    if lang == "العربية (AR)":
-        st.subheader("شاشة التنبيهات الاستباقية للموظف")
-        st.warning("تنبيه استباقي (VisiPulse): تم رصد مؤشرات تراجع في أداء الجهاز المادي (DEV-101).")
-        if st.button("ضغط (OK) لتأكيد القراءة"):
-            st.success("تم تأكيد الاستلام بنجاح.")
-    else:
-        st.subheader("Employee Proactive Alert Screen")
-        st.warning("Proactive Alert (VisiPulse): Performance degradation detected in hardware device (DEV-101).")
-        if st.button("Click (OK) to Confirm Reading"):
-            st.success("Acknowledgment confirmed successfully.")
+    st.warning("تنبيه استباقي (VisiPulse): تم رصد مؤشرات تراجع في أداء الجهاز (DEV-101).")
 
 with tab2:
-    if lang == "العربية (AR)":
-        st.subheader("بوابات الدخول الآمنة للأقسام والإدارة")
-        portal_choice = st.radio("اختر البوابة المطلوبة:", ["قسم تقنية المعلومات (IT Sub-divisions)", "الإدارة العليا (Upper Management)"])
-        
-        if portal_choice == "قسم تقنية المعلومات (IT Sub-divisions)":
-            it_passcode = st.text_input("أدخل الكود السري:", type="password")
-            if it_passcode == "it123":
-                st.success("تم التحقق بنجاح.")
-                # (باقي كود الـ IT كما هو...)
-        
-        elif portal_choice == "الإدارة العليا (Upper Management)":
-            mgmt_passcode = st.text_input("أدخل الكود السري:", type="password")
-            if mgmt_passcode == "mgmt999":
-                st.success("أهلاً بك في لوحة مؤشرات الإدارة العليا:")
-                
-                # إضافة الرسم البياني هنا
-                chart_data = pd.DataFrame(
-                    {"الأعطال المتفاداة": [5, 8, 12, 15, 22, 28]},
-                    index=["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"]
-                )
-                st.markdown("### منحنى انخفاض الأعطال استباقياً")
-                st.line_chart(chart_data)
-                
-                col_m1, col_m2 = st.columns(2)
-                with col_m1:
-                    st.metric(label="إجمالي الكفاءة التشغيلية", value="94.8%", delta="+3.2%")
-                with col_m2:
-                    st.metric(label="الأعطال المتوقعة التي تم تفاديها", value="28 عطل")
+    portal_choice = st.radio("اختر البوابة:", ["قسم تقنية المعلومات (IT)", "الإدارة العليا (Upper Management)"])
+    
+    if portal_choice == "قسم تقنية المعلومات (IT)":
+        it_passcode = st.text_input("أدخل كود الـ IT:", type="password")
+        if it_passcode == "it123":
+            sub_tab = st.selectbox("اختر القسم:", ["مدير الصحة الإلكترونية (e-Health)", "قسم الجودة (Quality)", "قسم الشبكات (Network)", "الدعم الفني (IT Support)"])
+            
+            # --- تعديل: إضافة رسوم بيانية لمدير الصحة والجودة ---
+            if sub_tab == "مدير الصحة الإلكترونية (e-Health)":
+                st.markdown("### لوحة مراقبة الصحة الإلكترونية (Strategic View)")
+                # رسم بياني لمؤشر الجاهزية
+                data = pd.DataFrame({'الجاهزية %': [99.2, 98.5, 99.8, 99.5]}, index=["سيرفر 1", "سيرفر 2", "سيرفر 3", "سيرفر 4"])
+                st.bar_chart(data)
+                st.success("القرار: الأنظمة تعمل بكفاءة عالية، لا حاجة لإيقاف أي خدمات.")
 
-    else: # English Section
-        st.subheader("Secure Portals for Departments & Management")
-        portal_choice = st.radio("Choose Required Portal:", ["IT Sub-divisions", "Upper Management"])
-        
-        if portal_choice == "Upper Management":
-            mgmt_passcode = st.text_input("Enter Upper Management Passcode:", type="password")
-            if mgmt_passcode == "mgmt999":
-                st.success("Welcome to Upper Management Indicators Dashboard:")
-                
-                # إضافة الرسم البياني هنا
-                chart_data_en = pd.DataFrame(
-                    {"Prevented Failures": [5, 8, 12, 15, 22, 28]},
-                    index=["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+            elif sub_tab == "قسم الجودة (Quality)":
+                st.markdown("### لوحة جودة البيانات (Performance vs Target)")
+                # رسم بياني مقارنة زمن الاستجابة بالمستهدف
+                chart_data = pd.DataFrame(
+                    {"زمن الاستجابة الفعلي": [2.1, 1.8, 3.2, 2.5], "المستهدف (Target)": [2.0, 2.0, 2.0, 2.0]},
+                    index=["وحدة 1", "وحدة 2", "وحدة 3", "وحدة 4"]
                 )
-                st.markdown("### Proactive Failure Reduction Curve")
-                st.line_chart(chart_data_en)
-                
-                col_m1, col_m2 = st.columns(2)
-                with col_m1:
-                    st.metric(label="Total Operational Efficiency", value="94.8%", delta="+3.2% proactive")
-                with col_m2:
-                    st.metric(label="Anticipated Failures Prevented", value="28 Failures")
+                st.line_chart(chart_data)
+                st.error("تنبيه: الوحدة 3 و 4 تجاوزت المستهدف. القرار: مطلوب تدخل تصحيحي.")
+            
+            else:
+                st.info("لوحة تشغيلية: بانتظار تحديثات النظام.")
+
+    elif portal_choice == "الإدارة العليا (Upper Management)":
+        mgmt_passcode = st.text_input("أدخل كود الإدارة العليا:", type="password")
+        if mgmt_passcode == "mgmt999":
+            st.markdown("### لوحة مؤشرات الإدارة العليا")
+            chart_data = pd.DataFrame({"الأعطال المتفاداة": [5, 8, 12, 15, 22, 28]}, index=["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"])
+            st.line_chart(chart_data)
+            col_m1, col_m2 = st.columns(2)
+            col_m1.metric("الكفاءة التشغيلية", "94.8%", "+3.2%")
+            col_m2.metric("الأعطال المتفاداة", "28 عطل")
