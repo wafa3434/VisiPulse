@@ -15,6 +15,10 @@ if "tickets" not in st.session_state:
 if "alert_acknowledged" not in st.session_state:
     st.session_state.alert_acknowledged = False
 
+# تهيئة قرار الجودة في الذاكرة لتتبع الإرسال التلقائي
+if "quality_decision_text" not in st.session_state:
+    st.session_state.quality_decision_text = ""
+
 # --- الترويسة العليا (شعار + ترجمة) ---
 header_col1, header_col2, header_col3 = st.columns([2, 5, 1])
 
@@ -132,14 +136,19 @@ with tab2:
                         st.line_chart(sat_df)
 
                     st.markdown("---")
-                    quality_decision = st.selectbox("اتخاذ قرار إداري / اعتمادي:" if lang == "العربية (AR)" else "Make Quality Decision:", [
-                        "اعتماد تقرير مطابقة الأداء الرقمي لشهر أغسطس",
-                        "طلب خطة تحسين عاجلة لبطء استجابة الأنظمة الطبية",
-                        "فتح مراجعة لالتزام فريق الدعم بأوقات معالجة البلاغات (SLA)"
-                    ])
+                    st.markdown("#### اتخاذ قرار إداري أو كتابة قرار مخصص (اضغط Enter للإرسال الفوري):")
                     
-                    if st.button("تنفيذ واعتماد القرار الإداري" if lang == "العربية (AR)" else "Execute Decision"):
-                        st.info(f"تم اعتماد القرار بنجاح وتسجيله في سجل جودة الصحة الإلكترونية: ({quality_decision})")
+                    # حقل نصي حر يسمح بالكتابة الحرة والإرسال التلقائي عند الضغط على Enter
+                    user_custom_decision = st.text_input(
+                        "اكتب القرار أو اختر من المقترحات (اعتماد تقرير مطابقة الأداء الرقمي لشهر أغسطس / طلب خطة تحسين عاجلة / فتح مراجعة SLA):",
+                        value="",
+                        placeholder="اكتب القرار هنا واضغط Enter...",
+                        key="decision_input"
+                    )
+                    
+                    # التحقق من الضغط على Enter وإدخال نص لطباعة الاعتماد تلقائياً
+                    if user_custom_decision:
+                        st.success(f"تم اعتماد القرار بنجاح وتوثيقه آلياً في سجل الجودة: ({user_custom_decision})")
                 else:
                     st.bar_chart(pd.DataFrame({'معدل التكامل الرقمي %': [99.2, 98.5, 99.8, 99.5]}, index=["الربط المركزي", "السجلات الصحية", "الخدمات الإكلينيكية", "التكامل الإحصائي"]))
 
@@ -172,7 +181,7 @@ with tab2:
                     tickets_df["الشركة المقاولة"] = contractor
                 st.table(tickets_df)
 
-            # 4. قسم البنية التحتية (متوافق مع اشتراطات الأمن السيبراني)
+            # 4. قسم البنية التحتية
             elif "Infrastructure" in sub_tab or "البنية التحتية" in sub_tab:
                 st.markdown("### قسم البنية التحتية (Infrastructure Department)")
                 st.info("مراقبة السيرفرات، غرف الاتصالات، ومعدل استهلاك النطاق الترددي للشبكة استباقياً (مع الالتزام بسياسات الأمن السيبراني).")
