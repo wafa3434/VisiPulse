@@ -48,21 +48,21 @@ with tab1:
     
     # رسالة الإنذار الاستباقي الفوري مع زر OK
     if not st.session_state.alert_acknowledged:
-        st.error("⚠️ انتبه: يتواجد فيروس في الجهاز أو الهارد ديسك لا يعمل بشكل سليم (DEV-305). يرجى تأكيد الإرسال لقسم الـ IT.")
+        st.error("تنبيه: يتواجد برنامج ضار في الجهاز أو الهارد ديسك لا يعمل بشكل سليم (DEV-305). يرجى تأكيد الإرسال لقسم تقنية المعلومات.")
         
         if st.button("OK - إرسال التذكرة تلقائياً إلى الـ IT" if lang == "العربية (AR)" else "OK - Send Ticket Automatically to IT"):
             auto_ticket = {
                 "رقم التذكرة": f"TICK-{len(st.session_state.tickets) + 101}",
                 "الجهاز": "DEV-305",
                 "القسم المستهدف": "قسم الدعم الفني",
-                "الوصف": "إنذار استباقي: فيروس بالهارد ديسك / عطل معالجة",
+                "الوصف": "إنذار استباقي: مشكلة بالهارد ديسك / عطل معالجة",
                 "الحالة": "جديد (New)"
             }
             st.session_state.tickets.append(auto_ticket)
             st.session_state.alert_acknowledged = True
             st.rerun()
     else:
-        st.success("✅ تم تأكيد الإنذار وإرسال التذكرة بنجاح إلى قسم تقنية المعلومات (IT). شكراً لتعاونك." if lang == "العربية (AR)" else "✅ Alert acknowledged and ticket sent to IT successfully.")
+        st.success("تم تأكيد الإنذار وإرسال التذكرة بنجاح إلى قسم تقنية المعلومات. شكراً لتعاونك." if lang == "العربية (AR)" else "Alert acknowledged and ticket sent to IT successfully.")
         
         if st.button("إعادة عرض الإنذار للاختبار" if lang == "العربية (AR)" else "Reset Alert for Testing"):
             st.session_state.alert_acknowledged = False
@@ -86,7 +86,7 @@ with tab2:
             c2.metric("نسبة الاستقرار العام" if lang == "العربية (AR)" else "Stability Rate", "94.8%", "+3.2%")
             c3.metric("التوفير المالي" if lang == "العربية (AR)" else "Financial Savings", "150 ألف ر.س", "+12%")
 
-    # بوابة تقنية المعلومات (IT) - مقسمة حسب الأقسام الرسمية الأربعة المذكورة في اللوحة
+    # بوابة تقنية المعلومات (IT) - مقسمة حسب الأقسام الرسمية
     elif "قسم تقنية المعلومات" in portal_choice or "IT Department" in portal_choice:
         it_passcode = st.text_input("أدخل كود الـ IT:" if lang == "العربية (AR)" else "Enter IT Password:", type="password", key="it_pass")
         if it_passcode == "it123":
@@ -108,19 +108,37 @@ with tab2:
                 
             sub_tab = st.selectbox("اختر القسم:" if lang == "العربية (AR)" else "Select Department:", sub_tabs)
             
-            # 1. إدارة الصحة الإلكترونية
+            # 1. إدارة الصحة الإلكترونية (ويتبع لها قسم الجودة)
             if "E-health" in sub_tab or "الصحة الإلكترونية" in sub_tab:
-                st.markdown("### 🌐 إدارة الصحة الإلكترونية (E-Health Management)")
+                st.markdown("### إدارة الصحة الإلكترونية (E-Health Management)")
                 st.info("مراقبة التكامل الرقمي، جاهزية منصات الصحة الرقمية، ومؤشرات الأداء الإلكتروني.")
-                st.bar_chart(pd.DataFrame({'معدل التكامل الرقمي %': [99.2, 98.5, 99.8, 99.5]}, index=["الربط المركزي", "السجلات الصحية", "الخدمات الإكلينيكية", "التكامل الإحصائي"]))
+                
+                quality_view = st.radio("اختر الوحدة التنظيمية:" if lang == "العربية (AR)" else "Select Unit:", 
+                                        ["مؤشرات الصحة الإلكترونية العامّة", "وحدة الجودة (Quality Management Unit)"])
+                
+                if "وحدة الجودة" in quality_view or "Quality Management" in quality_view:
+                    st.markdown("---")
+                    st.markdown("#### لوحة قرارات مدير قسم الجودة (Quality & Compliance Decision Hub)")
+                    st.success("يتخذ مدير الجودة هنا قرارات مراجعة مستويات الخدمة (SLA)، تقييم رضا المستفيدين، واعتماد معايير الأمان الرقمي.")
+                    
+                    quality_decision = st.selectbox("اتخاذ قرار إداري / اعتمادي:" if lang == "العربية (AR)" else "Make Quality Decision:", [
+                        "اعتماد تقرير مطابقة الأداء الرقمي لشهر أغسطس",
+                        "طلب خطة تحسين عاجلة لبطء استجابة الأنظمة الطبية",
+                        "فتح مراجعة لالتزام فريق الدعم بأوقات معالجة البلاغات (SLA)"
+                    ])
+                    
+                    if st.button("تنفيذ واعتماد القرار الإداري" if lang == "العربية (AR)" else "Execute Decision"):
+                        st.info(f"تم اعتماد القرار بنجاح وتسجيله في سجل جودة الصحة الإلكترونية: ({quality_decision})")
+                else:
+                    st.bar_chart(pd.DataFrame({'معدل التكامل الرقمي %': [99.2, 98.5, 99.8, 99.5]}, index=["الربط المركزي", "السجلات الصحية", "الخدمات الإكلينيكية", "التكامل الإحصائي"]))
 
-            # 2. قسم الأنظمة والتطبيقات (مثل +Oasis) - آمن قانونياً ويراقب الترخيص والخدمات المساندة
+            # 2. قسم الأنظمة والتطبيقات
             elif "Systems" in sub_tab or "الأنظمة والتطبيقات" in sub_tab:
-                st.markdown("### 💻 قسم الأنظمة والتطبيقات (Systems and Applications Department)")
-                st.info("مراقبة استقرار بوابات الربط (APIs)، وتتبع التذاكر البرمجية وحالة تراخيص الأنظمة (مثل +Oasis) لضمان عدم توقف الخدمات.")
+                st.markdown("### قسم الأنظمة والتطبيقات (Systems and Applications Department)")
+                st.info("مراقبة استقرار بوابات الربط (APIs)، وتتبع التذاكر البرمجية وحالة تراخيص الأنظمة لضمان عدم توقف الخدمات.")
                 
                 app_status_df = pd.DataFrame({
-                    "النظام / التطبيق": ["+Oasis (النظام الطبي)", "نظام إدارة المواعيد", "نظام المختبر والاشعة LIS/PACS"],
+                    "النظام / التطبيق": ["النظام الطبي (+Oasis)", "نظام إدارة المواعيد", "نظام المختبر والاشعة LIS/PACS"],
                     "حالة الاتصال والخدمة": ["متصل ومستقر", "مستقر", "تحذير: بطء طفيف بالاستجابة"],
                     "الشركة الموردة": ["شركة الحلول الطبية", "شركة التقنية الرقمية", "الأنظمة المتقدمة"]
                 })
@@ -129,7 +147,7 @@ with tab2:
 
             # 3. قسم الدعم الفني
             elif "Technical Support" in sub_tab or "الدعم الفني" in sub_tab:
-                st.markdown("### 🛠️ قسم الدعم الفني (Technical Support Department)")
+                st.markdown("### قسم الدعم الفني (Technical Support Department)")
                 st.info("استقبال البلاغات الآلية الواردة فوراً من الأجهزة وإدارتها.")
                 
                 contractor = st.text_input("أدخل اسم الشركة المقاولة للصيانة (ثم اضغط Enter):" if lang == "العربية (AR)" else "Enter Maintenance Contractor Name:")
@@ -143,9 +161,9 @@ with tab2:
                     tickets_df["الشركة المقاولة"] = contractor
                 st.table(tickets_df)
 
-            # 4. قسم البنية التحتية (الشبكات والسيرفرات)
+            # 4. قسم البنية التحتية
             elif "Infrastructure" in sub_tab or "البنية التحتية" in sub_tab:
-                st.markdown("### 🔌 قسم البنية التحتية (Infrastructure Department)")
+                st.markdown("### قسم البنية التحتية (Infrastructure Department)")
                 st.info("مراقبة السيرفرات، غرف الاتصالات، ومعدل استهلاك النطاق الترددي للشبكة استباقياً.")
                 
                 col1, col2 = st.columns(2)
