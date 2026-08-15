@@ -4,14 +4,14 @@ import pandas as pd
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
-# تهيئة الذاكرة المؤقتة (Session State) لحفظ البلاغات التلقائية الواردة لقسم الـ IT
+# تهيئة الذاكرة المؤقتة (Session State) للبلاغات الواردة
 if "tickets" not in st.session_state:
     st.session_state.tickets = [
-        {"رقم التذكرة": "TICK-101", "الجهاز": "DEV-101", "نوع العطل": "مادي (Hardware)", "الوصف": "تراجع أداء المكونات المادية والهارد ديسك", "الحالة": "قيد المعالجة"},
-        {"رقم التذكرة": "TICK-102", "الجهاز": "DEV-204", "نوع العطل": "أمني / تقني", "الوصف": "تم رصد فيروس أو تهديد محتمل في الجهاز", "الحالة": "جديد"}
+        {"رقم التذكرة": "TICK-101", "الجهاز": "DEV-101", "القسم المستهدف": "قسم الدعم الفني", "الوصف": "تراجع أداء الهارد ديسك", "الحالة": "قيد المعالجة"},
+        {"رقم التذكرة": "TICK-102", "الجهاز": "DEV-204", "القسم المستهدف": "قسم الدعم الفني", "الوصف": "إنذار استباقي: رصد فيروس محتمل", "الحالة": "جديد"}
     ]
 
-# حالة للتحقق مما إذا تم الضغط على زر الإنذار أم لا
+# حالة للتحقق من الضغط على زر الإنذار
 if "alert_acknowledged" not in st.session_state:
     st.session_state.alert_acknowledged = False
 
@@ -24,8 +24,10 @@ with header_col3:
 with header_col1:
     sub_col_logo, sub_col_text = st.columns([1, 2.5])
     with sub_col_logo:
-        try: st.image("logo.jpeg", width=70)
-        except: st.write("VisiPulse")
+        try:
+            st.image("logo.jpeg", width=70)
+        except:
+            st.write("VisiPulse")
     with sub_col_text:
         st.markdown("<h3 style='margin-bottom: 0px;'>VisiPulse</h3>", unsafe_allow_html=True)
         st.caption("طبقة الذكاء الاستباقي" if lang == "العربية (AR)" else "Proactive Intelligence Layer")
@@ -37,23 +39,22 @@ with header_col2:
 
 st.markdown("---")
 
-# --- تبويبات النظام ---
-tab_titles = ["شاشة الموظفين والتنبيهات", "بوابة الإدارة والتقنية"] if lang == "العربية (AR)" else ["Employee Alerts", "Management & IT Portal"]
+# --- تبويبات النظام الرئيسية ---
+tab_titles = ["شاشة الموظفين والتنبيهات", "بوابة الإدارة والتقنية (IT)"] if lang == "العربية (AR)" else ["Employee Alerts", "Management & IT Portal"]
 tab1, tab2 = st.tabs(tab_titles)
 
 with tab1:
     st.subheader("شاشة التنبيهات الاستباقية للموظف" if lang == "العربية (AR)" else "Employee Proactive Alert Screen")
     
-    # محاكاة الإنذار الاستباقي الفوري على الواجهة دون الحاجة لإدخال يدوي
+    # رسالة الإنذار الاستباقي الفوري مع زر OK
     if not st.session_state.alert_acknowledged:
         st.error("⚠️ انتبه: يتواجد فيروس في الجهاز أو الهارد ديسك لا يعمل بشكل سليم (DEV-305). يرجى تأكيد الإرسال لقسم الـ IT.")
         
         if st.button("OK - إرسال التذكرة تلقائياً إلى الـ IT" if lang == "العربية (AR)" else "OK - Send Ticket Automatically to IT"):
-            # إضافة التذكرة تلقائياً للنظام
             auto_ticket = {
                 "رقم التذكرة": f"TICK-{len(st.session_state.tickets) + 101}",
                 "الجهاز": "DEV-305",
-                "نوع العطل": "أمني / تقني (Security/Hardware)",
+                "القسم المستهدف": "قسم الدعم الفني",
                 "الوصف": "إنذار استباقي: فيروس بالهارد ديسك / عطل معالجة",
                 "الحالة": "جديد (New)"
             }
@@ -85,72 +86,74 @@ with tab2:
             c2.metric("نسبة الاستقرار العام" if lang == "العربية (AR)" else "Stability Rate", "94.8%", "+3.2%")
             c3.metric("التوفير المالي" if lang == "العربية (AR)" else "Financial Savings", "150 ألف ر.س", "+12%")
 
-    # بوابة تقنية المعلومات (IT)
+    # بوابة تقنية المعلومات (IT) - مقسمة حسب الأقسام الرسمية الأربعة المذكورة في اللوحة
     elif "قسم تقنية المعلومات" in portal_choice or "IT Department" in portal_choice:
         it_passcode = st.text_input("أدخل كود الـ IT:" if lang == "العربية (AR)" else "Enter IT Password:", type="password", key="it_pass")
         if it_passcode == "it123":
             
             if lang == "العربية (AR)":
                 sub_tabs = [
-                    "مدير الصحة الإلكترونية (e-Health)",
-                    "قسم الأنظمة الطبية (Medical System)",
-                    "قسم الدعم الفني (IT Support)",
-                    "قسم الشبكات (Network)",
-                    "قسم الجودة (Quality)"
+                    "إدارة الصحة الإلكترونية (E-health management)",
+                    "قسم الأنظمة والتطبيقات (Systems and Applications)",
+                    "قسم الدعم الفني (Technical Support)",
+                    "قسم البنية التحتية (Infrastructure)"
                 ]
             else:
                 sub_tabs = [
-                    "e-Health Manager",
-                    "Medical System",
-                    "IT Support",
-                    "Network",
-                    "Quality Department"
+                    "E-health management",
+                    "Systems and Applications",
+                    "Technical Support",
+                    "Infrastructure"
                 ]
                 
-            sub_tab = st.selectbox("اختر القسم الفرعي:" if lang == "العربية (AR)" else "Select Sub-division:", sub_tabs)
+            sub_tab = st.selectbox("اختر القسم:" if lang == "العربية (AR)" else "Select Department:", sub_tabs)
             
-            # 1. الصحة الإلكترونية
-            if "e-Health" in sub_tab or "الصحة الإلكترونية" in sub_tab:
-                st.markdown("### لوحة مراقبة الصحة الإلكترونية (e-Health)")
-                st.bar_chart(pd.DataFrame({'الجاهزية %': [99.2, 98.5, 99.8, 99.5]}, index=["سيرفر 1", "سيرفر 2", "سيرفر 3", "سيرفر 4"]))
-                st.success("آلية الاستفادة: مراقبة التوافق الرقمي وتكامل الأنظمة المساندة وضمان استمرارية الخدمات.")
+            # 1. إدارة الصحة الإلكترونية
+            if "E-health" in sub_tab or "الصحة الإلكترونية" in sub_tab:
+                st.markdown("### 🌐 إدارة الصحة الإلكترونية (E-Health Management)")
+                st.info("مراقبة التكامل الرقمي، جاهزية منصات الصحة الرقمية، ومؤشرات الأداء الإلكتروني.")
+                st.bar_chart(pd.DataFrame({'معدل التكامل الرقمي %': [99.2, 98.5, 99.8, 99.5]}, index=["الربط المركزي", "السجلات الصحية", "الخدمات الإكلينيكية", "التكامل الإحصائي"]))
 
-            # 2. الأنظمة الطبية
-            elif "Medical" in sub_tab or "الأنظمة الطبية" in sub_tab:
-                st.markdown("### لوحة الأنظمة الطبية (Medical System)")
-                st.info("الفكرة الاستباقية: مراقبة مساحات تخزين السيرفرات وسرعة استجابة النظام الطبي دون إبطائه.")
-                st.success("القيمة المضافة: ضمان استقرار بيئة العمل الطبية وتدفق العمليات الإكلينيكية بسلاسة تامة.")
+            # 2. قسم الأنظمة والتطبيقات (مثل +Oasis) - آمن قانونياً ويراقب الترخيص والخدمات المساندة
+            elif "Systems" in sub_tab or "الأنظمة والتطبيقات" in sub_tab:
+                st.markdown("### 💻 قسم الأنظمة والتطبيقات (Systems and Applications Department)")
+                st.info("مراقبة استقرار بوابات الربط (APIs)، وتتبع التذاكر البرمجية وحالة تراخيص الأنظمة (مثل +Oasis) لضمان عدم توقف الخدمات.")
                 
-                med_data = pd.DataFrame({"سرعة الاستجابة (ms)": [120, 115, 130, 110, 105]}, index=["وحدة العناية", "الطوارئ", "العيادات", "الأشعة", "المختبر"])
-                st.line_chart(med_data)
+                app_status_df = pd.DataFrame({
+                    "النظام / التطبيق": ["+Oasis (النظام الطبي)", "نظام إدارة المواعيد", "نظام المختبر والاشعة LIS/PACS"],
+                    "حالة الاتصال والخدمة": ["متصل ومستقر", "مستقر", "تحذير: بطء طفيف بالاستجابة"],
+                    "الشركة الموردة": ["شركة الحلول الطبية", "شركة التقنية الرقمية", "الأنظمة المتقدمة"]
+                })
+                st.table(app_status_df)
+                st.success("القرار الاستباقي: تم رصد كفاءة عمل بوابات الربط وتوجيه الموردين بحل مشكلة البطء قبل توقف الخدمات.")
 
-            # 3. الدعم الفني (استقبال التذاكر التلقائية وتوجيهها لشركة الصيانة)
-            elif "IT Support" in sub_tab or "الدعم الفني" in sub_tab:
-                st.markdown("### لوحة تحكم قسم الدعم الفني والتنبؤ بالأعطال")
-                st.info("الفكرة الاستباقية: استقبال التذاكر المرصودة استباقياً وتتبعها لخفض تكاليف وصيانة الأجهزة.")
+            # 3. قسم الدعم الفني
+            elif "Technical Support" in sub_tab or "الدعم الفني" in sub_tab:
+                st.markdown("### 🛠️ قسم الدعم الفني (Technical Support Department)")
+                st.info("استقبال البلاغات الآلية الواردة فوراً من الأجهزة وإدارتها.")
                 
-                contractor = st.text_input("أدخل اسم الشركة المقاولة للصيانة (ثم اضغط Enter):" if lang == "العربية (AR)" else "Enter Maintenance Contractor Name (Press Enter):")
+                contractor = st.text_input("أدخل اسم الشركة المقاولة للصيانة (ثم اضغط Enter):" if lang == "العربية (AR)" else "Enter Maintenance Contractor Name:")
                 
                 if contractor:
                     st.success(f"تم ربط التذاكر الواردة وإرسالها تلقائياً إلى شركة الصيانة: {contractor}")
                 
-                st.markdown("#### سجل البلاغات الواردة تلقائياً من الأجهزة (الإنذار الاستباقي):")
+                st.markdown("#### سجل البلاغات الواردة آلياً من الأجهزة:")
                 tickets_df = pd.DataFrame(st.session_state.tickets)
                 if contractor:
                     tickets_df["الشركة المقاولة"] = contractor
                 st.table(tickets_df)
 
-            # 4. الشبكات
-            elif "Network" in sub_tab or "الشبكات" in sub_tab:
-                st.markdown("### لوحة مراقبة الشبكات (Network)")
-                st.info("الفكرة الاستباقية: تحليل أوقات الذروة واستهلاك النطاق الترددي لتوزيع الأحمال استباقياً وتقليل الاختناقات الرقمية.")
+            # 4. قسم البنية التحتية (الشبكات والسيرفرات)
+            elif "Infrastructure" in sub_tab or "البنية التحتية" in sub_tab:
+                st.markdown("### 🔌 قسم البنية التحتية (Infrastructure Department)")
+                st.info("مراقبة السيرفرات، غرف الاتصالات، ومعدل استهلاك النطاق الترددي للشبكة استباقياً.")
                 
-                net_data = pd.DataFrame({"استهلاك النطاق (Mbps)": [45, 70, 95, 60, 40]}, index=["الصباح", "الظهر", "أوقات الذروة", "المساء", "الليل"])
-                st.area_chart(net_data)
-                st.success("القرار الاستباقي: تم إعادة توجيه الأحمال آلياً لتجنب أي هبوط في سرعة الشبكة.")
-
-            # 5. الجودة
-            elif "Quality" in sub_tab or "الجودة" in sub_tab:
-                st.markdown("### لوحة جودة البيانات وحوكمتها (Quality)")
-                st.line_chart(pd.DataFrame({"زمن الاستجابة الفعلي": [2.1, 1.8, 3.2, 2.5], "المستهدف": [2.0, 2.0, 2.0, 2.0]}, index=["وحدة 1", "وحدة 2", "وحدة 3", "وحدة 4"]))
-                st.error("تنبيه: مراقبة أزمنة الاستجابة لحظياً وإطلاق علامات حمراء عند تجاوز المستهدفات لضمان الامتثال للمعايير.")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### جاهزية سيرفرات الداتا سنتر")
+                    st.bar_chart(pd.DataFrame({'الجاهزية %': [99.5, 98.9, 99.8]}, index=["سيرفر أ", "سيرفر ب", "سيرفر ج"]))
+                with col2:
+                    st.markdown("#### أحمال استهلاك الشبكة (Mbps)")
+                    st.line_chart(pd.DataFrame({"الاستهلاك": [45, 75, 90, 60, 40]}, index=["الصباح", "الظهر", "الذروة", "المساء", "الليل"]))
+                
+                st.warning("تنبيه استباقي: تم رصد ضغط عالي على سويتش مبنى العيادات، وتم تفعيل إعادة توزيع الأحمال آلياً.")
