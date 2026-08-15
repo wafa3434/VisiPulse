@@ -4,12 +4,16 @@ import pandas as pd
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
-# تهيئة الذاكرة المؤقتة (Session State) لحفظ البلاغات الواردة بين شاشة الموظف وقسم الـ IT
+# تهيئة الذاكرة المؤقتة (Session State) لحفظ البلاغات التلقائية الواردة لقسم الـ IT
 if "tickets" not in st.session_state:
     st.session_state.tickets = [
-        {"رقم التذكرة": "TICK-101", "الجهاز": "DEV-101", "نوع العطل": "مادي (Hardware)", "الوصف": "تراجع أداء المكونات المادية", "الحالة": "قيد المعالجة"},
-        {"رقم التذكرة": "TICK-102", "الجهاز": "DEV-204", "نوع العطل": "تقني (Software)", "الوصف": "بطء استجابة النظام البرمجي", "الحالة": "جديد"}
+        {"رقم التذكرة": "TICK-101", "الجهاز": "DEV-101", "نوع العطل": "مادي (Hardware)", "الوصف": "تراجع أداء المكونات المادية والهارد ديسك", "الحالة": "قيد المعالجة"},
+        {"رقم التذكرة": "TICK-102", "الجهاز": "DEV-204", "نوع العطل": "أمني / تقني", "الوصف": "تم رصد فيروس أو تهديد محتمل في الجهاز", "الحالة": "جديد"}
     ]
+
+# حالة للتحقق مما إذا تم الضغط على زر الإنذار أم لا
+if "alert_acknowledged" not in st.session_state:
+    st.session_state.alert_acknowledged = False
 
 # --- الترويسة العليا (شعار + ترجمة) ---
 header_col1, header_col2, header_col3 = st.columns([2, 5, 1])
@@ -38,32 +42,30 @@ tab_titles = ["شاشة الموظفين والتنبيهات", "بوابة ال
 tab1, tab2 = st.tabs(tab_titles)
 
 with tab1:
-    st.subheader("شاشة التنبيهات الاستباقية وإرسال البلاغات" if lang == "العربية (AR)" else "Proactive Alerts & Ticket Submission Screen")
-    st.warning("تنبيه استباقي (VisiPulse): تم رصد مؤشرات تراجع في أداء الجهاز (DEV-101)." if lang == "العربية (AR)" else "Proactive Alert: Performance degradation detected in (DEV-101).")
+    st.subheader("شاشة التنبيهات الاستباقية للموظف" if lang == "العربية (AR)" else "Employee Proactive Alert Screen")
     
-    st.markdown("---")
-    st.markdown("#### نموذج إرسال بلاغ عطل جديد إلى قسم الدعم الفني" if lang == "العربية (AR)" else "Submit New Fault Ticket to IT Support")
-    
-    with st.form("employee_ticket_form"):
-        emp_device = st.text_input("معرف الجهاز (Device ID):" if lang == "العربية (AR)" else "Device ID:")
-        fault_type = st.selectbox("حدد نوع العطل:" if lang == "العربية (AR)" else "Select Fault Type:", ["مادي (Hardware)", "تقني (Software)"])
-        fault_desc = st.text_area("وصف المشكلة:" if lang == "العربية (AR)" else "Issue Description:")
+    # محاكاة الإنذار الاستباقي الفوري على الواجهة دون الحاجة لإدخال يدوي
+    if not st.session_state.alert_acknowledged:
+        st.error("⚠️ انتبه: يتواجد فيروس في الجهاز أو الهارد ديسك لا يعمل بشكل سليم (DEV-305). يرجى تأكيد الإرسال لقسم الـ IT.")
         
-        submit_button = st.form_submit_button("إرسال البلاغ (Send)" if lang == "العربية (AR)" else "Send Ticket")
+        if st.button("OK - إرسال التذكرة تلقائياً إلى الـ IT" if lang == "العربية (AR)" else "OK - Send Ticket Automatically to IT"):
+            # إضافة التذكرة تلقائياً للنظام
+            auto_ticket = {
+                "رقم التذكرة": f"TICK-{len(st.session_state.tickets) + 101}",
+                "الجهاز": "DEV-305",
+                "نوع العطل": "أمني / تقني (Security/Hardware)",
+                "الوصف": "إنذار استباقي: فيروس بالهارد ديسك / عطل معالجة",
+                "الحالة": "جديد (New)"
+            }
+            st.session_state.tickets.append(auto_ticket)
+            st.session_state.alert_acknowledged = True
+            st.rerun()
+    else:
+        st.success("✅ تم تأكيد الإنذار وإرسال التذكرة بنجاح إلى قسم تقنية المعلومات (IT). شكراً لتعاونك." if lang == "العربية (AR)" else "✅ Alert acknowledged and ticket sent to IT successfully.")
         
-        if submit_button:
-            if emp_device and fault_desc:
-                new_ticket = {
-                    "رقم التذكرة": f"TICK-{len(st.session_state.tickets) + 101}",
-                    "الجهاز": emp_device,
-                    "نوع العطل": fault_type,
-                    "الوصف": fault_desc,
-                    "الحالة": "جديد (New)"
-                }
-                st.session_state.tickets.append(new_ticket)
-                st.success("تم إرسال البلاغ بنجاح إلى لوحة تحكم قسم الـ IT لتصنيفه استباقياً." if lang == "العربية (AR)" else "Ticket successfully sent to IT dashboard.")
-            else:
-                st.error("الرجاء تعبئة الحقول المطلوبة." if lang == "العربية (AR)" else "Please fill in the required fields.")
+        if st.button("إعادة عرض الإنذار للاختبار" if lang == "العربية (AR)" else "Reset Alert for Testing"):
+            st.session_state.alert_acknowledged = False
+            st.rerun()
 
 with tab2:
     portal_label = "اختر البوابة:" if lang == "العربية (AR)" else "Choose Portal:"
@@ -72,7 +74,7 @@ with tab2:
     
     # بوابة الإدارة العليا
     if "الإدارة العليا" in portal_choice or "Upper Management" in portal_choice:
-        mgmt_passcode = st.text_input("أدخل كود الإدارة:" if lang == "العربية (AR)" else "Enter Password:", type="password")
+        mgmt_passcode = st.text_input("أدخل كود الإدارة:" if lang == "العربية (AR)" else "Enter Password:", type="password", key="mgmt_pass")
         if mgmt_passcode == "mgmt999":
             st.markdown("### " + ("لوحة المؤشرات الاستراتيجية وأداء المستشفى" if lang == "العربية (AR)" else "Strategic Indicators Dashboard"))
             chart_data = pd.DataFrame({"الكفاءة التشغيلية %": [88, 90, 92, 91, 93, 94.8]}, index=["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"] if lang == "العربية (AR)" else ["Jan", "Feb", "Mar", "Apr", "May", "Jun"])
@@ -85,7 +87,7 @@ with tab2:
 
     # بوابة تقنية المعلومات (IT)
     elif "قسم تقنية المعلومات" in portal_choice or "IT Department" in portal_choice:
-        it_passcode = st.text_input("أدخل كود الـ IT:" if lang == "العربية (AR)" else "Enter IT Password:", type="password")
+        it_passcode = st.text_input("أدخل كود الـ IT:" if lang == "العربية (AR)" else "Enter IT Password:", type="password", key="it_pass")
         if it_passcode == "it123":
             
             if lang == "العربية (AR)":
@@ -122,17 +124,17 @@ with tab2:
                 med_data = pd.DataFrame({"سرعة الاستجابة (ms)": [120, 115, 130, 110, 105]}, index=["وحدة العناية", "الطوارئ", "العيادات", "الأشعة", "المختبر"])
                 st.line_chart(med_data)
 
-            # 3. الدعم الفني (مع استقبال البلاغات وتصنيفها مادي أو تقني، واسم الشركة المقاولة)
+            # 3. الدعم الفني (استقبال التذاكر التلقائية وتوجيهها لشركة الصيانة)
             elif "IT Support" in sub_tab or "الدعم الفني" in sub_tab:
                 st.markdown("### لوحة تحكم قسم الدعم الفني والتنبؤ بالأعطال")
-                st.info("الفكرة الاستباقية: تتبع دورة حياة الأجهزة والتنبؤ بالأعطال قبل وقوعها لخفض تكاليف الصيانة.")
+                st.info("الفكرة الاستباقية: استقبال التذاكر المرصودة استباقياً وتتبعها لخفض تكاليف وصيانة الأجهزة.")
                 
                 contractor = st.text_input("أدخل اسم الشركة المقاولة للصيانة (ثم اضغط Enter):" if lang == "العربية (AR)" else "Enter Maintenance Contractor Name (Press Enter):")
                 
                 if contractor:
-                    st.success(f"تم ربط التذاكر وإرسالها تلقائياً إلى شركة الصيانة: {contractor}")
+                    st.success(f"تم ربط التذاكر الواردة وإرسالها تلقائياً إلى شركة الصيانة: {contractor}")
                 
-                st.markdown("#### سجل البلاغات الواردة من الموظفين (تصنيف الأعطال: مادي / تقني):")
+                st.markdown("#### سجل البلاغات الواردة تلقائياً من الأجهزة (الإنذار الاستباقي):")
                 tickets_df = pd.DataFrame(st.session_state.tickets)
                 if contractor:
                     tickets_df["الشركة المقاولة"] = contractor
