@@ -4,10 +4,13 @@ import pandas as pd
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
-# دالة لجلب اسم الجهاز بشكل واقعي (مثل أسماء أجهزة المستشفى)
-def get_device_name():
-    # هنا تم تحديد اسم جهاز افتراضي واقعي بدلاً من localhost
-    return "Desktop-2345-ICU"
+# دالة لجلب بيانات الجهاز والقسم تلقائياً بناءً على النظام المثبت
+def get_device_info():
+    # محاكاة لبيانات الجهاز المسجلة مسبقاً في النظام الطبي
+    return {
+        "device_name": "Desktop-2345-ICU",
+        "department": "العناية المركزة (ICU)"
+    }
 
 # تهيئة الذاكرة المشتركة للتذاكر والتنبيهات
 if "tickets" not in st.session_state:
@@ -30,15 +33,17 @@ tab1, tab2, tab3 = st.tabs(["شاشة الموظفين (الاستباقية)", 
 # 1. شاشة الموظفين (الاستباقية)
 with tab1:
     st.subheader("لوحة التنبيهات الاستباقية للموظف")
-    st.error("تنبيه استباقي: تم رصد خلل تقني في جهازك الموضح أدناه.")
+    st.error("تنبيه استباقي: تم رصد خلل تقني في جهازك الحالي.")
+    
+    # جلب معلومات الجهاز والقسم تلقائياً
+    device_info = get_device_info()
     
     with st.form("proactive_alert_form"):
-        # حقل القسم كتابة حرة
-        dept = st.text_input("اسم القسم (اكتب القسم التابع له):", placeholder="مثال: العناية المركزة، الطوارئ...")
+        # عرض القسم المرصود تلقائياً
+        st.write("اسم القسم المرصود تلقائياً:", device_info["department"])
         
-        # عرض اسم الجهاز الواقعي
-        detected_device = get_device_name()
-        st.write("اسم الجهاز المرصود:", detected_device)
+        # عرض اسم الجهاز المرصود تلقائياً
+        st.write("معرف الجهاز المرصود تلقائياً:", device_info["device_name"])
         
         issue_type = st.selectbox("نوع المشكلة المكتشفة:", ["تعطل شبكة", "رصد فيروس", "عطل هاردوير (PC)"])
         
@@ -50,19 +55,16 @@ with tab1:
         submitted = st.form_submit_button("OK - إرسال التنبيه لقسم الدعم الفني")
         
         if submitted:
-            if dept.strip() == "":
-                st.warning("يرجى كتابة اسم القسم قبل الإرسال.")
-            else:
-                new_ticket = {
-                    "القسم": dept,
-                    "معرف الجهاز": detected_device,
-                    "المشكلة": issue_type,
-                    "نوع العطل": "هاردوير" if is_hardware else "شبكة/برمجيات",
-                    "يحتاج صيانة": maint_needed,
-                    "الحالة": "مفتوحة وعاجلة"
-                }
-                st.session_state.tickets.append(new_ticket)
-                st.success("تم تأكيد التنبيه وإرساله لقسم الدعم الفني بنجاح.")
+            new_ticket = {
+                "القسم": device_info["department"],
+                "معرف الجهاز": device_info["device_name"],
+                "المشكلة": issue_type,
+                "نوع العطل": "هاردوير" if is_hardware else "شبكة/برمجيات",
+                "يحتاج صيانة": maint_needed,
+                "الحالة": "مفتوحة وعاجلة"
+            }
+            st.session_state.tickets.append(new_ticket)
+            st.success("تم تأكيد التنبيه وإرساله لقسم الدعم الفني بنجاح.")
 
 # 2. بوابة الإدارة العليا
 with tab2:
