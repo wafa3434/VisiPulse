@@ -1,16 +1,13 @@
 import streamlit as st
 import pandas as pd
-import socket
 
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
-# وظيفة لجلب اسم الجهاز تلقائياً
+# دالة لجلب اسم الجهاز بشكل واقعي (مثل أسماء أجهزة المستشفى)
 def get_device_name():
-    try:
-        return socket.gethostname()
-    except:
-        return "THC-SYSTEM-UNKNOWN"
+    # هنا تم تحديد اسم جهاز افتراضي واقعي بدلاً من localhost
+    return "Desktop-2345-ICU"
 
 # تهيئة الذاكرة المشتركة للتذاكر والتنبيهات
 if "tickets" not in st.session_state:
@@ -39,7 +36,7 @@ with tab1:
         # حقل القسم كتابة حرة
         dept = st.text_input("اسم القسم (اكتب القسم التابع له):", placeholder="مثال: العناية المركزة، الطوارئ...")
         
-        # جلب اسم الجهاز تلقائياً من النظام
+        # عرض اسم الجهاز الواقعي
         detected_device = get_device_name()
         st.write("اسم الجهاز المرصود:", detected_device)
         
