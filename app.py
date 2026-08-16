@@ -3,7 +3,7 @@ import pandas as pd
 import random
 
 # إعداد الصفحة
-st.set_page_config(page_title="VisiPulse - E-Health Management System", layout="wide")
+st.set_page_config(page_title="VisiPulse - E-Health Proactive Monitoring System", layout="wide")
 
 # تهيئة الذاكرة للتذاكر
 if "tickets" not in st.session_state:
@@ -22,7 +22,7 @@ def get_proactive_alert():
     return {
         "department": selected["dept"],
         "detected_issue": selected["issue"],
-        "device_name": f"THC-{random.randint(100,999)}-SYS"
+        "device_name": f"THC-MONITOR-{random.randint(100,999)}"
     }
 
 if "current_alert" not in st.session_state:
@@ -35,32 +35,54 @@ def generate_stats_csv():
     df = pd.DataFrame(st.session_state.tickets)
     return df.to_csv(index=False).encode('utf-8-sig')
 
-# الترويسة
-st.markdown("<h2 style='text-align: center; color: #1a5276;'>VisiPulse - إدارة الصحة الإلكترونية</h2>", unsafe_allow_html=True)
+# --- الجزء المحدث: عرض الشعار والترجمة ---
+header_col1, header_col2, header_col3 = st.columns([1, 6, 2])
+
+with header_col1:
+    # عرض الشعار الخاص بك
+    try:
+        st.image("logo.jpeg", width=120)
+    except:
+        st.write("الشعار هنا")
+
+with header_col2:
+    st.markdown("<h3 style='text-align: center; color: #1a5276;'>VisiPulse - نظام المراقبة الاستباقية لإدارة الصحة الإلكترونية</h3>", unsafe_allow_html=True)
+
+with header_col3:
+    lang = st.selectbox("Language / اللغة", ["العربية", "English"])
+
 st.markdown("---")
 
-# التبويبات
-tab1, tab2, tab3 = st.tabs(["شاشة الموظفين (استباقية)", "بوابة الإدارة العليا", "بوابة الأقسام (IT & Quality)"])
+# --- شريط حالة المراقبة الحية ---
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("حالة نظام المراقبة", "متصل ويراقب", "Live")
+m2.metric("الأجهزة المراقبة", "1,420 جهاز", "نشط")
+m3.metric("الأنظمة الطبية المرصودة", "48 نظام", "100%")
+m4.metric("التنبيهات الاستباقية المباشرة", len(st.session_state.tickets), "عاجل")
+
+st.markdown("---")
+
+# التبويبات الرئيسية
+tab1, tab2, tab3 = st.tabs(["شاشة الموظفين (المراقبة الاستباقية)", "بوابة الإدارة العليا", "بوابة الأقسام (IT & Quality)"])
 
 # 1. شاشة الموظفين
 with tab1:
-    st.subheader("لوحة التنبيهات الاستباقية")
+    st.subheader("لوحة التنبيهات الاستباقية الفورية")
     alert = st.session_state.current_alert
     
-    # العطل يظهر استباقياً فوراً
-    st.error(f"تنبيه استباقي مرصود في {alert['department']}: {alert['detected_issue']}")
+    st.error(f"تنبيه استباقي من نظام المراقبة في {alert['department']}: {alert['detected_issue']}")
     
     with st.form("proactive_alert_form"):
-        st.write("القسم:", alert["department"])
-        st.write("المعرف:", alert["device_name"])
-        st.write("المشكلة:", alert["detected_issue"])
+        st.write("القسم المستهدف:", alert["department"])
+        st.write("المعرف المراقب:", alert["device_name"])
+        st.write("تفاصيل الخلل المرصود:", alert["detected_issue"])
         
         is_hardware = ("البنية التحتية" in alert["department"] or "الدعم الفني" in alert["department"])
         maint_needed = "غير مطلوب"
         if is_hardware:
-            maint_needed = st.radio("هل يحتاج لصيانة خارجية فورية؟", ["نعم", "لا"])
+            maint_needed = st.radio("هل يحتاج نظام المراقبة صيانة خارجية فورية عبر شركة مقاولات؟", ["نعم", "لا"])
             
-        submitted = st.form_submit_button("تأكيد البلاغ وإرساله")
+        submitted = st.form_submit_button("تأكيد البلاغ الاستباقي وإرساله")
         
         if submitted:
             new_ticket = {
@@ -73,37 +95,52 @@ with tab1:
                 "الحالة": "مفتوحة وعاجلة"
             }
             st.session_state.tickets.append(new_ticket)
-            st.success("تم إرسال البلاغ بنجاح.")
+            st.success("تم إرسال البلاغ لنظام المراقبة والدعم الفني بنجاح.")
             st.session_state.current_alert = get_proactive_alert()
 
 # 2. الإدارة العليا
 with tab2:
-    mgmt_pass = st.text_input("كود الإدارة:", type="password", key="mgmt_login")
+    mgmt_pass = st.text_input("أدخل كود الإدارة العليا:", type="password", key="mgmt_login")
     if mgmt_pass == "mgmt999":
+        st.subheader("مؤشرات الأداء الاستراتيجية لنظام المراقبة")
         c1, c2, c3 = st.columns(3)
-        c1.metric("البلاغات الاستباقية", len(st.session_state.tickets), "+")
-        c2.metric("مستوى الاستقرار", "96%", "+")
-        c3.metric("جودة الخدمات", "98%", "+")
+        c1.metric("الأعطال التي تم تلافيها استباقياً", len(st.session_state.tickets) + 12, "+4")
+        c2.metric("مستوى الاستقرار العام للشبكة", "97.4%", "+1.2%")
+        c3.metric("مؤشر جودة خدمات الصحة الإلكترونية", "99.1%", "+0.8%")
+    elif mgmt_pass:
+        st.warning("كود الإدارة غير صحيح.")
 
 # 3. الأقسام (IT & Quality)
 with tab3:
-    it_pass = st.text_input("كود الدعم الفني:", type="password", key="it_login")
+    it_pass = st.text_input("أدخل كود الدعم الفني وإدارة الأقسام:", type="password", key="it_login")
     if it_pass == "it123":
+        st.subheader("إدارة ومتابعة البلاغات الاستباقية للأنظمة والجودة")
         if st.session_state.tickets:
             df = pd.DataFrame(st.session_state.tickets)
             st.table(df)
             
-            st.subheader("تحديث وإغلاق البلاغ")
+            st.markdown("---")
+            st.subheader("إغلاق وتحديث البلاغ وتوثيق شركة المقاولات والجودة")
             with st.form("close_ticket_form"):
-                ticket_index = st.selectbox("اختر البلاغ للتحديث:", options=range(len(st.session_state.tickets)))
+                ticket_index = st.selectbox("اختر البلاغ المراد تحديثه وإغلاقه:", options=range(len(st.session_state.tickets)))
                 contractor_name = st.text_input("اسم شركة مقاولات الصيانة (كتابة):")
-                maintenance_details = st.text_input("تفاصيل تقرير الصيانة/الجودة (كتابة):")
+                maintenance_details = st.text_input("تفاصيل تقرير الصيانة أو الجودة (كتابة):")
                 
-                if st.form_submit_button("إغلاق البلاغ وتوثيقه"):
-                    st.session_state.tickets[ticket_index]["شركة الصيانة"] = contractor_name
-                    st.session_state.tickets[ticket_index]["تفاصيل الصيانة"] = maintenance_details
+                if st.form_submit_button("إغلاق البلاغ وتوثيقه في نظام المراقبة"):
+                    st.session_state.tickets[ticket_index]["شركة الصيانة"] = contractor_name if contractor_name else "لا توجد"
+                    st.session_state.tickets[ticket_index]["تفاصيل الصيانة"] = maintenance_details if maintenance_details else "لا توجد"
                     st.session_state.tickets[ticket_index]["الحالة"] = "مغلقة ومعتمدة"
+                    st.success("تم تحديث البلاغ وإغلاقه بنجاح.")
                     st.rerun()
             
-            if st.download_button("تصدير التقرير", data=generate_stats_csv(), file_name="Report.csv"):
-                pass
+            if st.button("مسح السجلات المعالجة"):
+                st.session_state.tickets = []
+                st.rerun()
+            
+            csv_data = generate_stats_csv()
+            if csv_data:
+                st.download_button("استخراج تقرير نظام المراقبة CSV", data=csv_data, file_name="Monitoring_Report.csv", mime="text/csv")
+        else:
+            st.info("لا توجد بلاغات استباقية نشطة في نظام المراقبة حالياً.")
+    elif it_pass:
+        st.warning("كود الدخول غير صحيح.")
