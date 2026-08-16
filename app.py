@@ -3,62 +3,55 @@ import pandas as pd
 from io import BytesIO
 
 # إعداد الصفحة
-st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
+st.set_page_config(page_title="VisiPulse", layout="wide")
 
-# تهيئة بيانات التذاكر
-if "tickets" not in st.session_state:
-    st.session_state.tickets = [
-        {"رقم التذكرة": "TICK-101", "معرف الجهاز": "TCH-CH-OPD123", "الأولوية": "قصوى", "الحالة": "قيد المعالجة"}
-    ]
+# 1. إظهار الشعار (تأكدي أن الملف باسم logo.jpeg في نفس المجلد)
+def show_header():
+    col_l, col_m, col_r = st.columns([1, 4, 1])
+    with col_l:
+        try:
+            st.image("logo.jpeg", width=80)
+        except:
+            st.write("LOGO")
+    with col_m:
+        st.title("VisiPulse")
+        st.caption("طبقة الذكاء الاستباقي - Infrastructure Monitoring")
 
-# --- الترويسة العليا ---
-header_col1, header_col2, header_col3 = st.columns([2, 5, 1])
-with header_col3:
-    lang = st.selectbox("Language / اللغة", ["العربية (AR)", "English (EN)"])
-with header_col1:
-    st.markdown("### VisiPulse")
-    st.caption("طبقة الذكاء الاستباقي" if lang == "العربية (AR)" else "Proactive Intelligence Layer")
-with header_col2:
-    st.markdown("<h2 style='text-align: center; color: #1a5276;'>" + 
-                ("نظام مراقبة البنية التحتية والإنذار المبكر" if lang == "العربية (AR)" else "Infrastructure Monitoring & Early Warning System") + 
-                "</h2>", unsafe_allow_html=True)
-
+show_header()
 st.markdown("---")
 
-# --- التبويبات الرئيسية ---
-tab1, tab2, tab3 = st.tabs(["شاشة الموظفين", "بوابة الإدارة العليا", "بوابة تقنية المعلومات (IT)"])
+# 2. تبويبات النظام
+tab1, tab2, tab3 = st.tabs(["شاشة الموظفين", "بوابة الإدارة العليا", "بوابة تقنية المعلومات"])
 
-# 1. شاشة الموظفين
+# شاشة الموظف مع Pop-up
 with tab1:
-    st.subheader("شاشة المستخدم")
-    if st.text_input("كود الموظف:", type="password", key="emp_k") == "emp123":
-        st.error("تنبيه: عطل استباقي في جهاز TCH-CH-OPD123")
-        st.button("تأكيد استلام التنبيه")
+    st.subheader("شاشة الموظف")
+    if st.text_input("كود الموظف:", type="password") == "emp123":
+        # هذا هو الـ Pop-up (Toast)
+        st.toast("تنبيه استباقي: تم رصد خلل في الهارد ديسك لجهازك (TCH-CH-OPD123). تم إبلاغ قسم الدعم الفني.", icon="⚠️")
+        st.warning("جاري التنسيق مع الدعم الفني لإصلاح الخلل.")
     else:
-        st.info("يرجى إدخال الكود للوصول للتنبيهات.")
+        st.info("يرجى إدخال كود الموظف.")
 
-# 2. بوابة الإدارة العليا (كود خاص)
+# بوابة الإدارة العليا
 with tab2:
-    st.subheader("لوحة مؤشرات الإدارة")
-    if st.text_input("كود الإدارة العليا:", type="password", key="mgmt_k") == "mgmt999":
-        col_a, col_b = st.columns(2)
-        col_a.metric("الأعطال المتفاداة", "28", "+5")
-        col_b.metric("نسبة الاستقرار", "94.8%", "+3.2%")
-        st.area_chart(pd.DataFrame({"الأداء": [80, 85, 90, 94.8]}))
+    if st.text_input("كود الإدارة:", type="password") == "mgmt999":
+        st.subheader("لوحة المؤشرات الاستراتيجية")
+        st.metric("نسبة الأعطال التي تم تلافيها", "98%")
     else:
-        st.warning("وصول مقيد. يتطلب كود الإدارة العليا.")
+        st.warning("دخول مقيد")
 
-# 3. بوابة تقنية المعلومات (كود خاص ومختلف)
+# بوابة الـ IT (هنا تُعرض تفاصيل الأعطال)
 with tab3:
-    st.subheader("لوحة تحكم قسم تقنية المعلومات")
-    if st.text_input("كود قسم تقنية المعلومات:", type="password", key="it_k") == "it777":
-        # هنا تظهر خيارات الـ IT فقط بعد إدخال كودهم الخاص
-        sub_tab = st.selectbox("قسم الـ IT:", ["الجودة", "الأنظمة", "الدعم الفني", "البنية التحتية"])
+    if st.text_input("كود الـ IT:", type="password") == "it777":
+        st.subheader("لوحة تحكم الدعم الفني (سجل الأعطال)")
         
-        if sub_tab == "الدعم الفني":
-            st.table(pd.DataFrame(st.session_state.tickets))
-        elif sub_tab == "البنية التحتية":
-            st.write("مراقبة البيئة الفيزيائية (حرارة/طاقة)")
-            st.table(pd.DataFrame([{"الجهاز": "Server-01", "الحرارة": "65C"}]))
+        # تصنيف الأعطال هنا
+        faults_df = pd.DataFrame({
+            "الجهاز": ["TCH-CH-OPD123", "TCH-CH-ER005"],
+            "نوع العطل": ["هارد ديسك (مادي)", "فيروس (تقني)"],
+            "الإجراء": ["استبدال قطعة", "تنظيف برمجي"]
+        })
+        st.table(faults_df)
     else:
-        st.warning("وصول مقيد. يتطلب كود قسم تقنية المعلومات.")
+        st.warning("دخول مقيد")
