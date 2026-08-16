@@ -1,8 +1,16 @@
 import streamlit as st
 import pandas as pd
+import socket
 
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
+
+# وظيفة لجلب اسم الجهاز تلقائياً
+def get_device_name():
+    try:
+        return socket.gethostname()
+    except:
+        return "THC-SYSTEM-UNKNOWN"
 
 # تهيئة الذاكرة المشتركة للتذاكر والتنبيهات
 if "tickets" not in st.session_state:
@@ -25,12 +33,16 @@ tab1, tab2, tab3 = st.tabs(["شاشة الموظفين (الاستباقية)", 
 # 1. شاشة الموظفين (الاستباقية)
 with tab1:
     st.subheader("لوحة التنبيهات الاستباقية للموظف")
-    st.error("تنبيه استباقي: تم رصد تعطل في نقطة الاتصال أو خلل في الحاسب الآلي في قسمك.")
+    st.error("تنبيه استباقي: تم رصد خلل تقني في جهازك الموضح أدناه.")
     
     with st.form("proactive_alert_form"):
-        # حقل القسم كتابة حرة لتغطية كافة الأقسام
-        dept = st.text_input("اسم القسم (اكتب القسم التابع له):")
-        device = st.text_input("رقم الجهاز:")
+        # حقل القسم كتابة حرة
+        dept = st.text_input("اسم القسم (اكتب القسم التابع له):", placeholder="مثال: العناية المركزة، الطوارئ...")
+        
+        # جلب اسم الجهاز تلقائياً من النظام
+        detected_device = get_device_name()
+        st.write("اسم الجهاز المرصود:", detected_device)
+        
         issue_type = st.selectbox("نوع المشكلة المكتشفة:", ["تعطل شبكة", "رصد فيروس", "عطل هاردوير (PC)"])
         
         is_hardware = (issue_type == "عطل هاردوير (PC)")
@@ -46,7 +58,7 @@ with tab1:
             else:
                 new_ticket = {
                     "القسم": dept,
-                    "الجهاز": device,
+                    "معرف الجهاز": detected_device,
                     "المشكلة": issue_type,
                     "نوع العطل": "هاردوير" if is_hardware else "شبكة/برمجيات",
                     "يحتاج صيانة": maint_needed,
@@ -74,16 +86,13 @@ with tab3:
         st.subheader("إدارة البلاغات الاستباقية")
         
         if st.session_state.tickets:
-            # عرض التذاكر
             df = pd.DataFrame(st.session_state.tickets)
             st.table(df)
             
-            # زر المسح
             if st.button("مسح جميع البلاغات المعالجة"):
                 st.session_state.tickets = []
                 st.rerun()
             
-            # زر تصدير CSV
             csv_data = generate_stats_csv()
             if csv_data:
                 st.download_button("استخراج تقرير CSV", data=csv_data, file_name="Proactive_Tickets.csv", mime="text/csv")
