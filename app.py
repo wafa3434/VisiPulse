@@ -47,8 +47,17 @@ def it_portal():
 
 tab1, tab2, tab3 = st.tabs(["شاشة الموظفين", "بوابة الإدارة", "بوابة الـ IT"])
 
+with tab1:
+    st.subheader("شاشة التنبيهات الاستباقية للموظف")
+    st.info("لا توجد تنبيهات جديدة حالياً.")
+
+with tab2:
+    st.subheader("بوابة الإدارة العليا")
+    st.metric("مؤشر الاستقرار العام", "94.8%")
+
 with tab3:
-    if st.text_input("كود الدخول للـ IT:", type="password") == "it123":
+    passcode = st.text_input("كود الدخول للـ IT:", type="password")
+    if passcode == "it123":
         it_portal()
-    else:
+    elif passcode:
         st.warning("يرجى إدخال كود الدخول الصحيح.")
