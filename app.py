@@ -4,9 +4,8 @@ import pandas as pd
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
-# دالة لجلب بيانات الجهاز والقسم تلقائياً بناءً على النظام المثبت
+# دالة لجلب معلومات الجهاز والقسم تلقائياً
 def get_device_info():
-    # محاكاة لبيانات الجهاز المسجلة مسبقاً في النظام الطبي
     return {
         "device_name": "Desktop-2345-ICU",
         "department": "العناية المركزة (ICU)"
@@ -35,14 +34,10 @@ with tab1:
     st.subheader("لوحة التنبيهات الاستباقية للموظف")
     st.error("تنبيه استباقي: تم رصد خلل تقني في جهازك الحالي.")
     
-    # جلب معلومات الجهاز والقسم تلقائياً
     device_info = get_device_info()
     
     with st.form("proactive_alert_form"):
-        # عرض القسم المرصود تلقائياً
         st.write("اسم القسم المرصود تلقائياً:", device_info["department"])
-        
-        # عرض اسم الجهاز المرصود تلقائياً
         st.write("معرف الجهاز المرصود تلقائياً:", device_info["device_name"])
         
         issue_type = st.selectbox("نوع المشكلة المكتشفة:", ["تعطل شبكة", "رصد فيروس", "عطل هاردوير (PC)"])
@@ -61,6 +56,8 @@ with tab1:
                 "المشكلة": issue_type,
                 "نوع العطل": "هاردوير" if is_hardware else "شبكة/برمجيات",
                 "يحتاج صيانة": maint_needed,
+                "شركة الصيانة": "قيد المعالجة",
+                "تفاصيل صيانة المقاول": "قيد المعالجة",
                 "الحالة": "مفتوحة وعاجلة"
             }
             st.session_state.tickets.append(new_ticket)
@@ -87,6 +84,23 @@ with tab3:
         if st.session_state.tickets:
             df = pd.DataFrame(st.session_state.tickets)
             st.table(df)
+            
+            st.markdown("---")
+            st.subheader("إغلاق وتحديث البلاغ (إدخال بيانات شركة المقاولات)")
+            
+            with st.form("close_ticket_form"):
+                ticket_index = st.selectbox("اختر رقم البلاغ المراد إغلاقه/تحديثه:", options=range(len(st.session_state.tickets)))
+                contractor_name = st.text_input("اسم شركة المقاولات الصيانة (كتابة):")
+                maintenance_details = st.text_input("تفاصيل عطل الصيانة (كتابة):")
+                
+                close_submitted = st.form_submit_button("إغلاق البلاغ وتحديث السجل")
+                
+                if close_submitted:
+                    st.session_state.tickets[ticket_index]["شركة الصيانة"] = contractor_name if contractor_name else "لا توجد"
+                    st.session_state.tickets[ticket_index]["تفاصيل صيانة المقاول"] = maintenance_details if maintenance_details else "لا توجد"
+                    st.session_state.tickets[ticket_index]["الحالة"] = "مغلقة ومعالجة"
+                    st.success("تم تحديث وإغلاق البلاغ بنجاح.")
+                    st.rerun()
             
             if st.button("مسح جميع البلاغات المعالجة"):
                 st.session_state.tickets = []
