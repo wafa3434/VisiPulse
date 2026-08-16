@@ -1,19 +1,26 @@
 import streamlit as st
 import pandas as pd
+import random
 
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
-# دالة لجلب معلومات الجهاز والقسم تلقائياً
-def get_device_info():
+# دالة لجلب معلومات الجهاز والقسم والعطل المرصود تلقائياً
+def get_proactive_alert():
+    # محاكاة لعطل يتم رصده استباقياً بواسطة النظام
+    issues_list = ["تعطل شبكة الاتصال", "رصد برمجية خبيثة (فيروس)", "عطل هاردوير في اللوحة الأم (PC)"]
     return {
         "device_name": "Desktop-2345-ICU",
-        "department": "العناية المركزة (ICU)"
+        "department": "العناية المركزة (ICU)",
+        "detected_issue": random.choice(issues_list)
     }
 
 # تهيئة الذاكرة المشتركة للتذاكر والتنبيهات
 if "tickets" not in st.session_state:
     st.session_state.tickets = []
+
+if "current_alert" not in st.session_state:
+    st.session_state.current_alert = get_proactive_alert()
 
 # --- وظيفة تصدير البيانات ---
 def generate_stats_csv():
@@ -32,28 +39,29 @@ tab1, tab2, tab3 = st.tabs(["شاشة الموظفين (الاستباقية)", 
 # 1. شاشة الموظفين (الاستباقية)
 with tab1:
     st.subheader("لوحة التنبيهات الاستباقية للموظف")
-    st.error("تنبيه استباقي: تم رصد خلل تقني في جهازك الحالي.")
     
-    device_info = get_device_info()
+    alert = st.session_state.current_alert
+    
+    # ظهور العطل استباقياً بشكل مباشر في رسالة التنبيه
+    st.error(f"تنبيه استباقي: تم رصد مشكلة ({alert['detected_issue']}) في جهازك الحالي بشكل تلقائي.")
     
     with st.form("proactive_alert_form"):
-        st.write("اسم القسم المرصود تلقائياً:", device_info["department"])
-        st.write("معرف الجهاز المرصود تلقائياً:", device_info["device_name"])
+        st.write("اسم القسم المرصود تلقائياً:", alert["department"])
+        st.write("معرف الجهاز المرصود تلقائياً:", alert["device_name"])
+        st.write("نوع المشكلة المرصودة تلقائياً:", alert["detected_issue"])
         
-        issue_type = st.selectbox("نوع المشكلة المكتشفة:", ["تعطل شبكة", "رصد فيروس", "عطل هاردوير (PC)"])
-        
-        is_hardware = (issue_type == "عطل هاردوير (PC)")
+        is_hardware = ("هاردوير" in alert["detected_issue"])
         maint_needed = "غير مطلوب"
         if is_hardware:
             maint_needed = st.radio("هل يحتاج لصيانة فورية؟", ["نعم", "لا"])
             
-        submitted = st.form_submit_button("OK - إرسال التنبيه لقسم الدعم الفني")
+        submitted = st.form_submit_button("OK - تأكيد وإرسال التنبيه لقسم الدعم الفني")
         
         if submitted:
             new_ticket = {
-                "القسم": device_info["department"],
-                "معرف الجهاز": device_info["device_name"],
-                "المشكلة": issue_type,
+                "القسم": alert["department"],
+                "معرف الجهاز": alert["device_name"],
+                "المشكلة": alert["detected_issue"],
                 "نوع العطل": "هاردوير" if is_hardware else "شبكة/برمجيات",
                 "يحتاج صيانة": maint_needed,
                 "شركة الصيانة": "قيد المعالجة",
@@ -62,6 +70,8 @@ with tab1:
             }
             st.session_state.tickets.append(new_ticket)
             st.success("تم تأكيد التنبيه وإرساله لقسم الدعم الفني بنجاح.")
+            # توليد عطل جديد للتجربة في المرات القادمة
+            st.session_state.current_alert = get_proactive_alert()
 
 # 2. بوابة الإدارة العليا
 with tab2:
