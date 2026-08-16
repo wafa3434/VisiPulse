@@ -1,5 +1,3 @@
-السبب أن التذكرة لا تظهر بشكل صحيح يرجع لأن كود زر الإرسال كان يعيد تحميل الشاشة (Rerun) بدون حفظ التذكرة بشكل دائم في الذاكرة المشتركة (st.session_state) بالطريقة الصحيحة للزر، أو أن المفاتيح تتداخل.
-تفضلي الكود المعدل بالكامل (نسخ ولصق)، حيث قمت بربط زر إرسال التذكرة من شاشة الموظفين بشكل مباشر مع جدول التذاكر في قسم الدعم الفني باستخدام دالة st.form أو تحديث دقيق للـ session_state لتظهر التذكرة فوراً وبدون أي مشاكل:
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -8,14 +6,13 @@ from io import BytesIO
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
-# تهيئة تخزين التذاكر في الـ Session State لضمان مزامنتها بين الشاشات
+# تهيئة تخزين التذاكر في الـ Session State
 if "tickets" not in st.session_state:
     st.session_state.tickets = [
         {"الجهاز": "DEV-305", "نوع العطل": "صيانة خارجية (هارد ديسك تالف)", "الحالة": "مفتوحة وعاجلة"},
         {"الجهاز": "SRV-01", "نوع العطل": "صيانة داخلية (تحديث برمجيات)", "الحالة": "مكتملة"}
     ]
 
-# وظيفة تصدير الأعطال كملف CSV
 def generate_stats_csv():
     data = {
         "اسم الجهاز": ["DEV-101", "SRV-02", "DEV-305"],
@@ -26,7 +23,7 @@ def generate_stats_csv():
     df = pd.DataFrame(data)
     return df.to_csv(index=False).encode('utf-8-sig')
 
-# --- الترويسة العليا (شعار + ترجمة) ---
+# --- الترويسة العليا ---
 header_col1, header_col2, header_col3 = st.columns([2, 5, 1])
 
 with header_col3:
@@ -58,7 +55,6 @@ with tab1:
     st.subheader("شاشة التنبيهات الاستباقية للموظف")
     st.error("تنبيه: تم رصد خلل في الهارد ديسك أو المعالج للجهاز (DEV-305).")
     
-    # استخدام نموذج (Form) لضمان حفظ وإرسال التذكرة للـ IT بدون فقدان البيانات عند التحديث
     with st.form("employee_ticket_form"):
         emp_maintenance_choice = st.radio(
             "حدد نوع الإصلاح المطلوب:", 
@@ -69,8 +65,6 @@ with tab1:
         if submitted:
             fault_type_str = "صيانة خارجية (هارد ديسك تالف)" if "صيانة خارجية" in emp_maintenance_choice else "صيانة داخلية (عطل بسيط)"
             new_ticket = {"الجهاز": "DEV-305", "نوع العطل": fault_type_str, "الحالة": "مفتوحة وعاجلة"}
-            
-            # إضافة التذكرة مباشرة للقائمة المعروضة في قسم الـ IT
             st.session_state.tickets.append(new_ticket)
             st.success("تم إرسال التذكرة بنجاح إلى قسم الدعم الفني!")
         
@@ -116,14 +110,12 @@ with tab3:
             st.write("---")
             st.markdown("#### كافة التذاكر الواردة من الموظفين (تحدث لحظياً):")
             
-            # عرض التذاكر المحدثة مباشرة من الذاكرة المشتركة
             tickets_df = pd.DataFrame(st.session_state.tickets)
             st.table(tickets_df)
             
             st.write("---")
             contractor = st.text_input("اسم الشركة المقاوله (اضغط Enter للتأكيد):", key="contractor_input_key")
             
-            # فلترة التذاكر الخاصة بالصيانة الخارجية فقط لتوجيهها للشركة
             external_tickets = [t for t in st.session_state.tickets if "صيانة خارجية" in t["نوع العطل"]]
             
             if external_tickets:
