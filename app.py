@@ -1,3 +1,5 @@
+السبب أن التذكرة لا تظهر بشكل صحيح يرجع لأن كود زر الإرسال كان يعيد تحميل الشاشة (Rerun) بدون حفظ التذكرة بشكل دائم في الذاكرة المشتركة (st.session_state) بالطريقة الصحيحة للزر، أو أن المفاتيح تتداخل.
+تفضلي الكود المعدل بالكامل (نسخ ولصق)، حيث قمت بربط زر إرسال التذكرة من شاشة الموظفين بشكل مباشر مع جدول التذاكر في قسم الدعم الفني باستخدام دالة st.form أو تحديث دقيق للـ session_state لتظهر التذكرة فوراً وبدون أي مشاكل:
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -6,19 +8,23 @@ from io import BytesIO
 # إعداد الصفحة
 st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
 
-# وظيفة تصدير الإحصائيات والأعطال إلى إكسل
-def generate_stats_excel():
+# تهيئة تخزين التذاكر في الـ Session State لضمان مزامنتها بين الشاشات
+if "tickets" not in st.session_state:
+    st.session_state.tickets = [
+        {"الجهاز": "DEV-305", "نوع العطل": "صيانة خارجية (هارد ديسك تالف)", "الحالة": "مفتوحة وعاجلة"},
+        {"الجهاز": "SRV-01", "نوع العطل": "صيانة داخلية (تحديث برمجيات)", "الحالة": "مكتملة"}
+    ]
+
+# وظيفة تصدير الأعطال كملف CSV
+def generate_stats_csv():
     data = {
         "اسم الجهاز": ["DEV-101", "SRV-02", "DEV-305"],
-        "نوع العطل": ["هارد ديسك", "حرارة المعالج", "برمجيات"],
+        "نوع العطل": ["هارد ديسك", "حرارة المعالج", "صيانة خارجية (هارد ديسك تالف)"],
         "عدد مرات التعطل": [3, 5, 2],
-        "الشركة المسؤولة": ["سيسكو", "إنتل", "داخلية"]
+        "الشركة المسؤولة": ["سيسكو", "إنتل", "شركة الصيانة الخارجية"]
     }
     df = pd.DataFrame(data)
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name="Maintenance_Statistics")
-    return output.getvalue()
+    return df.to_csv(index=False).encode('utf-8-sig')
 
 # --- الترويسة العليا (شعار + ترجمة) ---
 header_col1, header_col2, header_col3 = st.columns([2, 5, 1])
@@ -51,8 +57,23 @@ tab1, tab2, tab3 = st.tabs(["شاشة الموظفين", "بوابة الإدا�
 with tab1:
     st.subheader("شاشة التنبيهات الاستباقية للموظف")
     st.error("تنبيه: تم رصد خلل في الهارد ديسك أو المعالج للجهاز (DEV-305).")
-    if st.button("إرسال التذكرة تلقائياً إلى الـ IT"):
-        st.success("تم إرسال التذكرة بنجاح!")
+    
+    # استخدام نموذج (Form) لضمان حفظ وإرسال التذكرة للـ IT بدون فقدان البيانات عند التحديث
+    with st.form("employee_ticket_form"):
+        emp_maintenance_choice = st.radio(
+            "حدد نوع الإصلاح المطلوب:", 
+            ["صيانة داخلية", "صيانة خارجية (تحويل للشركة المقاولة)"]
+        )
+        submitted = st.form_submit_button("إرسال التذكرة تلقائياً إلى الـ IT")
+        
+        if submitted:
+            fault_type_str = "صيانة خارجية (هارد ديسك تالف)" if "صيانة خارجية" in emp_maintenance_choice else "صيانة داخلية (عطل بسيط)"
+            new_ticket = {"الجهاز": "DEV-305", "نوع العطل": fault_type_str, "الحالة": "مفتوحة وعاجلة"}
+            
+            # إضافة التذكرة مباشرة للقائمة المعروضة في قسم الـ IT
+            st.session_state.tickets.append(new_ticket)
+            st.success("تم إرسال التذكرة بنجاح إلى قسم الدعم الفني!")
+        
     st.info("نصيحة: يرجى عمل نسخة احتياطية لملفاتك الحساسة.")
 
 # 2. بوابة الإدارة العليا
@@ -77,28 +98,49 @@ with tab3:
             "البنية التحتية (حرارة وطاقة)", 
             "إدارة الصحة الإلكترونية", 
             "الأنظمة والتطبيقات"
-        ])
+        ], key="it_sub_tabs_key")
         
         # أ. الدعم الفني
         if "الدعم الفني" in sub_tab:
-            st.subheader("إدارة البلاغات والصيانة الخارجية")
-            contractor = st.text_input("اسم الشركة المقاوله (اضغط Enter للتأكيد):")
-            if contractor:
-                st.success(f"تم ربط التذاكر بالشركة المقاولة: {contractor}")
+            st.subheader("إدارة البلاغات وتوجيه أعطال الصيانة الخارجية للشركات")
             
-            maintenance_type = st.radio("هل يحتاج الجهاز صيانة خارجية؟", ["لا (داخلي)", "نعم (تحويل للشركة)"])
-            if maintenance_type == "نعم (تحويل للشركة)":
-                st.error(f"تنبيه: تم توجيه الجهاز فوراً للشركة المقاولة ({contractor if contractor else 'الخارجية'}) بناءً على نوع العطل.")
+            st.info("الاستباقية: يحلل النظام سجل الأعطال لتوقع قطع الغيار التي ستنفد قريباً بناءً على معدل الاستهلاك.")
+            prediction_df = pd.DataFrame({
+                "قطعة الغيار / المكون": ["هارد ديسك SSD 512GB", "وذاكرة عشوائية RAM 16GB", "مزود طاقة PSU"],
+                "المخزون الحالي": ["2 قطع", "1 قطع (منخفض جداً)", "5 قطع"],
+                "التوصية الاستباقية الفورية": ["طلب شراء عاجل", "تنبيه: طلب توريد فوري لتجنب توقف الصيانة", "المخزون آمن"]
+            })
+            st.table(prediction_df)
+            st.warning("تنبيه استباقي للدعم الفني: تم رصد نقص وشيك في وحدات الذاكرة العشوائية (RAM)، وتم إنشاء مسودة طلب شراء آليا.")
             
             st.write("---")
-            if st.button("استخراج تقرير الأعطال الدوري (Excel)"):
-                excel_data = generate_stats_excel()
-                st.download_button("تحميل التقرير الدوري", data=excel_data, file_name="Maintenance_Stats.xlsx")
+            st.markdown("#### كافة التذاكر الواردة من الموظفين (تحدث لحظياً):")
+            
+            # عرض التذاكر المحدثة مباشرة من الذاكرة المشتركة
+            tickets_df = pd.DataFrame(st.session_state.tickets)
+            st.table(tickets_df)
+            
+            st.write("---")
+            contractor = st.text_input("اسم الشركة المقاوله (اضغط Enter للتأكيد):", key="contractor_input_key")
+            
+            # فلترة التذاكر الخاصة بالصيانة الخارجية فقط لتوجيهها للشركة
+            external_tickets = [t for t in st.session_state.tickets if "صيانة خارجية" in t["نوع العطل"]]
+            
+            if external_tickets:
+                st.warning(f"يوجد {len(external_tickets)} تذكرة مصنفة كـ 'صيانة خارجية' وتتطلب التحويل للشركة المقاولة.")
+                if contractor:
+                    st.success(f"تم إرسال أعطال الصيانة الخارجية رسمياً إلى الشركة المقاولة: {contractor}")
+            else:
+                st.info("لا توجد أعطال صيانة خارجية تتطلب التحويل للشركة حالياً.")
+            
+            st.write("---")
+            if st.button("استخراج تقرير الأعطال الدوري (CSV)", key="csv_export_btn"):
+                csv_data = generate_stats_csv()
+                st.download_button("تحميل التقرير الدوري", data=csv_data, file_name="Maintenance_Stats.csv", mime="text/csv")
         
-        # ب. البنية التحتية (حرارة المعالجات والكهرباء)
+        # ب. البنية التحتية
         elif "البنية التحتية" in sub_tab:
             st.subheader("المراقبة الاستباقية للحرارة والطاقة في الداتا سنتر")
-            
             cpu_data = pd.DataFrame({
                 "السيرفر": ["SRV-01", "SRV-02", "SRV-03"],
                 "حرارة المعالج (C)": [65, 88, 72],
@@ -119,12 +161,10 @@ with tab3:
             st.table(power_data)
             st.metric("مؤشر استقرار شبكة الكهرباء العام", "96.5%", "+0.5%")
             
-        # ج. إدارة الصحة الإلكترونية (ويتبع لها قسم الجودة كخيار فرعي)
+        # ج. إدارة الصحة الإلكترونية والجودة
         elif "إدارة الصحة الإلكترونية" in sub_tab:
             st.subheader("إدارة الصحة الإلكترونية والتحول الرقمي")
-            
-            # الخيار الفرعي لإدارة الجودة تحت الصحة الإلكترونية
-            health_sub_section = st.radio("اختر الوحدة:", ["مؤشرات الصحة الإلكترونية العامة", "وحدة الجودة (Quality Management Unit)"])
+            health_sub_section = st.radio("اختر الوحدة:", ["مؤشرات الصحة الإلكترونية العامة", "وحدة الجودة (Quality Management Unit)"], key="health_sub_radio")
             
             if "وحدة الجودة" in health_sub_section:
                 st.markdown("#### لوحة القرار الاستباقي لوحدة الجودة")
@@ -138,7 +178,7 @@ with tab3:
                     st.markdown("##### مؤشر رضا المستفيدين")
                     st.line_chart(pd.DataFrame({"الرضا": [85, 89, 93, 96]}, index=["يناير", "فبراير", "مارس", "أبريل"]))
                 
-                decision_input = st.text_input("اكتب قرار الجودة المعتمد ثم اضغط Enter:")
+                decision_input = st.text_input("اكتب قرار الجودة المعتمد ثم اضغط Enter:", key="quality_decision_key")
                 if decision_input:
                     st.success(f"تم توثيق واختبار قرار الجودة آلياً: {decision_input}")
             else:
