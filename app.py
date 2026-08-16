@@ -1,83 +1,54 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 from io import BytesIO
 
-# إعداد الصفحة
-st.set_page_config(page_title="VisiPulse - Health Cluster Proactive System", layout="wide")
+st.set_page_config(page_title="VisiPulse - Advanced IT System", layout="wide")
 
-# تهيئة بيانات التذاكر في الذاكرة
-if "tickets" not in st.session_state:
-    st.session_state.tickets = [
-        {"التذكرة": "TICK-101", "الجهاز": "DEV-101", "الوصف": "تراجع أداء الهارد ديسك", "الحالة": "قيد المعالجة"}
-    ]
-
-# وظيفة تصدير التقارير (Excel)
-def export_to_excel(data_dict):
+def generate_stats_excel():
+    data = {
+        "اسم الجهاز": ["DEV-101", "SRV-02", "DEV-305"],
+        "نوع العطل": ["هارد ديسك", "حرارة", "برمجيات"],
+        "عدد مرات التعطل": [3, 5, 2],
+        "الشركة المسؤولة": ["سيسكو", "إنتل", "داخلية"]
+    }
+    df = pd.DataFrame(data)
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        for sheet_name, df in data_dict.items():
-            df.to_excel(writer, index=False, sheet_name=sheet_name)
+        df.to_excel(writer, index=False, sheet_name="Statistics")
     return output.getvalue()
 
-# --- الترويسة العليا ---
-def show_header():
-    col1, col2 = st.columns([1, 6])
-    with col1:
-        try:
-            st.image("logo.jpeg", width=100)
-        except:
-            st.write("VisiPulse")
-    with col2:
-        st.title("VisiPulse")
-        st.caption("طبقة الذكاء الاستباقي | Infrastructure Monitoring & Early Warning System")
-
-show_header()
-st.markdown("---")
-
-# --- التبويبات ---
-tab1, tab2, tab3 = st.tabs(["شاشة الموظفين", "بوابة الإدارة العليا", "بوابة تقنية المعلومات (IT)"])
-
-# 1. شاشة الموظفين (مفتوحة - تنبيه مباشر)
-with tab1:
-    st.subheader("لوحة التنبيهات الاستباقية للموظف")
-    st.error("⚠️ تنبيه استباقي: رصد خلل في الهارد ديسك لجهازك (DEV-305).")
-    if st.button("إرسال تذكرة صيانة (Ticket)"):
-        st.success("تم إرسال التذكرة تلقائياً إلى قسم الدعم الفني!")
-    st.info("💡 نصيحة: يرجى عمل نسخة احتياطية لبياناتك فوراً.")
-
-# 2. بوابة الإدارة العليا (مقيدة بكود)
-with tab2:
-    if st.text_input("كود الدخول للإدارة:", type="password", key="mgmt_login") == "mgmt999":
-        st.subheader("مؤشرات الأداء الاستراتيجية")
-        col_a, col_b = st.columns(2)
-        col_a.metric("الأعطال التي تم تلافيها", "42", "+12%")
-        col_b.metric("الوفر المالي (الصيانة الوقائية)", "150k SAR", "+5%")
-        st.area_chart(pd.DataFrame({"الأداء": [80, 85, 90, 94.8]}))
-    else:
-        st.warning("يرجى إدخال كود الإدارة للوصول.")
-
-# 3. بوابة تقنية المعلومات (IT - مقيدة بكود)
-with tab3:
-    if st.text_input("كود الدخول للـ IT:", type="password", key="it_login") == "it777":
-        sub = st.selectbox("اختر القسم:", ["إدارة الصحة الإلكترونية", "الدعم الفني", "البنية التحتية"])
+def it_portal():
+    st.subheader("لوحة تحكم تقنية المعلومات المتقدمة")
+    section = st.selectbox("اختر القسم:", ["الدعم الفني", "إدارة الجودة", "الأنظمة والتطبيقات"])
+    
+    if section == "الدعم الفني":
+        st.write("---")
+        contractor = st.text_input("اسم الشركة المقاوله (اضغط Enter للتأكيد):")
         
-        if sub == "الدعم الفني":
-            st.table(pd.DataFrame(st.session_state.tickets))
+        maintenance_type = st.radio("هل يحتاج الجهاز صيانة خارجية؟", ["لا (داخلي)", "نعم (تحويل للشركة)"])
+        
+        if maintenance_type == "نعم (تحويل للشركة)":
+            st.error(f"تنبيه: تم تفعيل بروتوكول التحويل الخارجي لـ {contractor if contractor else 'الشركة المحددة'}")
             
-        elif sub == "البنية التحتية":
-            st.subheader("مراقبة الحرارة والطاقة (استباقي)")
-            cpu_df = pd.DataFrame({"السيرفر": ["SRV-01", "SRV-02"], "الحرارة (C)": [65, 88], "الحالة": ["آمن", "خطر"]})
-            st.table(cpu_df)
-            
-            # منطق الاستباقية للحرارة
-            if cpu_df["الحرارة (C)"].max() > 80:
-                st.error("⚠️ تحذير: السيرفر SRV-02 يتجاوز الحرارة المسموحة!")
-            
-            st.write("---")
-            st.metric("استقرار شبكة الكهرباء (UPS)", "96%", "-2%")
-            
-            # التصدير للإكسل
-            excel_data = export_to_excel({" الحرارة": cpu_df, "الطاقة": pd.DataFrame({"UPS": ["UPS-A"], "Load %": [96]})})
-            st.download_button("📥 تحميل التقرير الدوري (Excel)", data=excel_data, file_name="IT_Infrastructure_Report.xlsx")
+        if st.button("استخراج تقرير الأعطال الدوري (Excel)"):
+            excel_data = generate_stats_excel()
+            st.download_button("تحميل التقرير", data=excel_data, file_name="Maintenance_Stats.xlsx")
+
+    elif section == "إدارة الجودة":
+        st.subheader("رسم بياني: كفاءة الأجهزة")
+        chart_data = pd.DataFrame(np.random.randn(10, 2), columns=['أداء المعالج', 'استقرار النظام'])
+        st.area_chart(chart_data)
+
+    elif section == "الأنظمة والتطبيقات":
+        st.subheader("حالة الأنظمة الحالية")
+        st.bar_chart({"زمن الاستجابة (ms)": [50, 120, 80, 210]})
+        st.success("الأنظمة تعمل بكفاءة 98%.")
+
+tab1, tab2, tab3 = st.tabs(["شاشة الموظفين", "بوابة الإدارة", "بوابة الـ IT"])
+
+with tab3:
+    if st.text_input("كود الدخول للـ IT:", type="password") == "it123":
+        it_portal()
     else:
-        st.warning("يرجى إدخال كود الـ IT للوصول.")
+        st.warning("يرجى إدخال كود الدخول الصحيح.")
