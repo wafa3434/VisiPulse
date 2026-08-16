@@ -9,13 +9,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# تهيئة الذاكرة المؤقتة للبلاغات والأجهزة
+# تهيئة الذاكرة المؤقتة للبلاغات والقرارات
 if "tickets" not in st.session_state:
     st.session_state.tickets = [
         {"القسم المسؤول": "قسم البنية التحتية", "اسم الجهاز": "SERVER-EX-01", "الموقع": "الداتا سنتر - الدور الأرضي", "نوع التنبيه": "تقني", "الحالة": "مغلقة"},
         {"القسم المسؤول": "قسم الأنظمة والتطبيقات", "اسم الجهاز": "SYS-MED-04", "الموقع": "طوارئ الأطفال", "نوع التنبيه": "تقني", "الحالة": "مغلقة"},
         {"القسم المسؤول": "قسم الدعم الفني", "اسم الجهاز": "PRN-PHARM-02", "الموقع": "صيدلية التنويم", "نوع التنبيه": "مادي (هاردوير)", "الحالة": "مغلقة"}
     ]
+
+if "maintenance_dispatches" not in st.session_state:
+    st.session_state.maintenance_dispatches = []
+
+if "quality_decisions" not in st.session_state:
+    st.session_state.quality_decisions = []
 
 # دالة توليد التنبيهات الاستباقية للموظف
 def get_employee_alert():
@@ -143,7 +149,7 @@ with main_tab2:
 with main_tab3:
     st.subheader("بوابة إدارة الـ IT والأقسام التخصصية")
     
-    it_master_pass = st.text_input("أدخل رمز الدخول الموحد لقسم الـ IT:", type="password", key="it_general_pass")
+    it_master_pass = st.text_input("أدخل رمز الدخول الموحد لقسم الـ IT (it2026):", type="password", key="it_general_pass")
     
     if it_master_pass == "it2026":
         st.success("تم التحقق من صلاحيات قسم الـ IT بنجاح.")
@@ -172,6 +178,30 @@ with main_tab3:
             else:
                 st.info("لا توجد بلاغات معلقة للدعم الفني حالياً.")
                 
+            st.markdown("---")
+            st.subheader("إرسال بلاغ عطل صياني إلى الشركة المقاولة مباشرة")
+            
+            with st.form("contractor_maintenance_form"):
+                contractor_name = st.text_input("اسم الشركة المقاولة للتشغيل والصيانة:")
+                fault_description = st.text_input("نوع العطل التفصيلي:")
+                dispatch_submitted = st.form_submit_button("إرسال البلاغ فوراً إلى الشركة المقاولة (Enter)")
+                
+                if dispatch_submitted:
+                    if contractor_name and fault_description:
+                        new_dispatch = {
+                            "الشركة المقاولة": contractor_name,
+                            "نوع العطل": fault_description,
+                            "حالة الإرسال": "تم الإرسال والربط بنجاح"
+                        }
+                        st.session_state.maintenance_dispatches.append(new_dispatch)
+                        st.success(f"تم إرسال بلاغ العطل بنجاح إلى شركة [{contractor_name}] المقاولة.")
+                    else:
+                        st.warning("يرجى إدخال اسم الشركة المقاولة ونوع العطل بشكل صحيح.")
+            
+            if st.session_state.maintenance_dispatches:
+                st.write("سجل بلاغات الصيانة المرسلة للشركات المقاولة:")
+                st.table(pd.DataFrame(st.session_state.maintenance_dispatches))
+
             st.markdown("---")
             st.subheader("إحصائيات وتحليلات أعطال الأجهزة")
             
@@ -202,7 +232,7 @@ with main_tab3:
             else:
                 st.info("لا توجد بلاغات معلقة للأنظمة والتطبيقات.")
 
-        # 3.3. موظف البنية التحتية
+        # 3.3. موظف البنية التحتية (مع الرسوم البيانية)
         elif it_sub_section == "موظف البنية التحتية":
             st.write("### واجهة موظف البنية التحتية")
             
@@ -213,25 +243,61 @@ with main_tab3:
             
             st.warning("المهام الاستباقية: رصد مستمر لأحمال السويتشات، درجات حرارة معالجات السيرفرات، وجاهزية الداتا سنتر لتفادي أي اختناق في البيانات.")
             
+            st.markdown("---")
+            st.subheader("الرسوم البيانية لأداء البنية التحتية والسيرفرات")
+            
+            infra_load_data = pd.DataFrame({
+                'النطاق': ['السيرفرات الرئيسية', 'محولات الشبكة', 'أنظمة التبريد', 'قواعد البيانات'],
+                'نسبة الاستهلاك أو الحمل (%)': [72, 65, 58, 80]
+            })
+            st.bar_chart(infra_load_data.set_index('النطاق'))
+            
             infra_tickets = [t for t in st.session_state.tickets if t["القسم المسؤول"] == "قسم البنية التحتية"]
             if infra_tickets:
                 st.table(pd.DataFrame(infra_tickets))
             else:
                 st.info("لا توجد بلاغات معلقة للبنية التحتية.")
 
-        # 3.4. مدير الجودة
+        # 3.4. مدير الجودة (مع خانة اقتراح وتدوين القرارات الإدارية)
         elif it_sub_section == "مدير الجودة":
             st.write("### واجهة مدير الجودة")
             st.metric("معدل امتثال المعايير التقنية والصحية", "99.3%", "مستقر")
             st.info("المهام الاستباقية: رصد الفجوات في مؤشرات الأداء التقني (KPIs) ومعايير الاعتماد المؤسسي واتخاذ التدابير التصحيحية.")
+            
+            st.markdown("---")
+            st.subheader("تدوين واقتراح القرارات الإدارية التصحيحية")
+            
+            with st.form("quality_decision_form"):
+                decision_text = st.text_area("اكتب القرار الإداري المقترح أو التوصية التصحيحية:")
+                decision_submitted = st.form_submit_button("حفظ وإرسال القرار الإداري")
+                
+                if decision_submitted:
+                    if decision_text:
+                        st.session_state.quality_decisions.append({"القرار الإداري": decision_text, "الحالة": "معتمد للتنفيذ"})
+                        st.success("تم حفظ القرار الإداري المقترح بنجاح وإدراجه في السجل.")
+                    else:
+                        st.warning("يرجى كتابة نص القرار الإداري قبل الإرسال.")
+            
+            if st.session_state.quality_decisions:
+                st.write("سجل القرارات الإدارية المقترحة من إدارة الجودة:")
+                st.table(pd.DataFrame(st.session_state.quality_decisions))
 
-        # 3.5. مدير الصحة الإلكترونية
+        # 3.5. مدير الصحة الإلكترونية (مع الرسوم البيانية)
         elif it_sub_section == "مدير الصحة الإلكترونية":
             st.write("### واجهة إدارة الصحة الإلكترونية")
             st.metric("كفاءة التكامل الشامل للأنظمة الطبية", "99.1%", "عالي")
             st.info("المهام الاستباقية: الإشراف العام على الأقسام المندرجة وتحليل تقارير الأداء الشاملة لصناع القرار.")
+            
+            st.markdown("---")
+            st.subheader("الرسوم البيانية الشاملة لكفاءة التكامل الصحي التقني")
+            
+            ehealth_perf_data = pd.DataFrame({
+                'النظام الطبي المدمج': ['الملف الطبي الإلكتروني', 'نظام التصوير الإشعاعي (PACS)', 'نظام المختبرات (LIS)', 'نظام المواعيد والطوارئ'],
+                'معدل كفاءة التشغيل (%)': [99.5, 98.2, 99.0, 97.8]
+            })
+            st.bar_chart(ehealth_perf_data.set_index('النظام الطبي المدمج'))
 
     elif it_master_pass:
         st.warning("رمز الدخول لقسم الـ IT غير صحيح.")
     else:
-        st.info("يرجى إدخال رمز الدخول الموحد الخاص بقسم الـ IT للوصول إلى القائمة المنسدلة والأقسام التخصصية.")
+        st.info("يرجى إدخال رمز الدخول الموحد الخاص بقسم الـ IT (it2026) للوصول إلى القائمة المنسدلة والأقسام التخصصية.")
