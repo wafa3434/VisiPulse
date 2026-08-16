@@ -9,46 +9,44 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# تهيئة الذاكرة المؤقتة للبلاغات في النظام
+# تهيئة الذاكرة المؤقتة للبلاغات والأجهزة
 if "tickets" not in st.session_state:
-    st.session_state.tickets = []
-
-# دالة توليد التنبيهات الاستباقية الواقعية للأقسام
-def get_proactive_alert():
-    departments_data = [
-        {
-            "dept": "قسم الأنظمة والتطبيقات", 
-            "issue": "رصد تذبذب غير مستقرار في الروابط (Link Jitter) بين واجهة التطبيق وقاعدة البيانات الطبية"
-        },
-        {
-            "dept": "قسم البنية التحتية", 
-            "issue": "تنبيه استباقي: ارتفاع أحمال السويتشات الرئيسية واقتراب حرارة معالجات السيرفرات من الحد الحراري الأقصى"
-        },
-        {
-            "dept": "قسم الدعم الفني", 
-            "issue": "تراكم استباقي لبلاغات بطء أجهزة صرف الأدوية الطرفية في الوحدات السريرية"
-        },
-        {
-            "dept": "إدارة الصحة الإلكترونية والجودة", 
-            "issue": "رصد فجوات محتملة في مؤشرات الأداء التقني (KPIs) ومعايير الاعتماد المؤسسي"
-        }
+    st.session_state.tickets = [
+        {"القسم المسؤول": "قسم البنية التحتية", "اسم الجهاز": "SERVER-EX-01", "الموقع": "الداتا سنتر - الدور الأرضي", "نوع التنبيه": "تقني", "الحالة": "مغلقة"},
+        {"القسم المسؤول": "قسم الأنظمة والتطبيقات", "اسم الجهاز": "SYS-MED-04", "الموقع": "طوارئ الأطفال", "نوع التنبيه": "تقني", "الحالة": "مغلقة"},
+        {"القسم المسؤول": "قسم الدعم الفني", "اسم الجهاز": "PRN-PHARM-02", "الموقع": "صيدلية التنويم", "نوع التنبيه": "مادي (هاردوير)", "الحالة": "مغلقة"}
     ]
-    selected = random.choice(departments_data)
+
+# دالة توليد التنبيهات الاستباقية للموظف
+def get_employee_alert():
+    devices = [
+        {"name": "MONITOR-ICU-12", "location": "العناية المركزة للأطفال - السرير 4", "type": "تقني"},
+        {"name": "PRINTER-ER-03", "location": "قسم الطوارئ - الاستقبال", "type": "مادي (هاردوير)"},
+        {"name": "SERVER-LAB-01", "location": "المختبر الرئيسي - الرف الثاني", "type": "تقني"},
+        {"name": "ACCESS-POINT-COR-05", "location": "ممر العيادات الخارجية - الطابق الأول", "type": "تقني"}
+    ]
+    selected_dev = random.choice(devices)
+    issues = [
+        "رصد بطء استجابة وتنبيه استباقي لاحتمالية توقف الخدمة مؤقتاً",
+        "تذبذب في خط الاتصال الرئيسي المرتبط بقاعدة البيانات",
+        "تنبيه استباقي: ارتفاع مؤشرات الاستهلاك واقتراب الحاجة للصيانة الوقائية"
+    ]
     return {
-        "department": selected["dept"],
-        "detected_issue": selected["issue"],
-        "device_id": f"THC-HOSP-SYS-{random.randint(1000,9999)}"
+        "device_name": selected_dev["name"],
+        "location": selected_dev["location"],
+        "alert_type": selected_dev["type"],
+        "issue_desc": random.choice(issues)
     }
 
-if "current_alert" not in st.session_state:
-    st.session_state.current_alert = get_proactive_alert()
+if "employee_current_alert" not in st.session_state:
+    st.session_state.employee_current_alert = get_employee_alert()
 
-# وظيفة تصدير التقارير الرسمية المعتمدة
-def generate_stats_csv():
-    if not st.session_state.tickets:
-        return ""
-    df = pd.DataFrame(st.session_state.tickets)
-    return df.to_csv(index=False).encode('utf-8-sig')
+# وظيفة تصدير تقارير إحصائيات الأجهزة وأكثر الأقسام عطلاً (Excel/CSV)
+def generate_excel_stats():
+    df_all = pd.DataFrame(st.session_state.tickets)
+    if df_all.empty:
+        df_all = pd.DataFrame(columns=["القسم المسؤول", "اسم الجهاز", "الموقع", "نوع التنبيه", "الحالة"])
+    return df_all.to_csv(index=False).encode('utf-8-sig')
 
 # ==================== الترويسة العلوية الرسمية ====================
 header_col1, header_col2, header_col3 = st.columns([1, 6, 2])
@@ -71,140 +69,183 @@ with header_col3:
 
 st.markdown("---")
 
-# ==================== القائمة الرئيسية (التبويبات المعتمدة) ====================
-tab1, tab2, tab3, tab4 = st.tabs([
-    "شاشة الموظفين (المراقبة الفورية)", 
-    "إدارة الصحة الإلكترونية وقسم الجودة", 
-    "قسم البنية التحتية", 
-    "قسم الأنظمة والدعم الفني"
+# ==================== القائمة الرئيسية للثلاث واجهات الكبرى ====================
+main_tab1, main_tab2, main_tab3 = st.tabs([
+    "شاشة الموظف (المراقبة الميدانية الفورية)", 
+    "شاشة الإدارة العليا (المؤشرات والرسوم)", 
+    "شاشة قسم الـ IT والأقسام التخصصية"
 ])
 
-# 1. شاشة الموظفين والعمليات الحية
-with tab1:
-    st.subheader("لوحة التنبيهات الاستباقية المباشرة")
-    alert = st.session_state.current_alert
+# ---------------------------------------------------------------------------
+# 1. شاشة الموظف
+# ---------------------------------------------------------------------------
+with main_tab1:
+    st.subheader("لوحة التنبيهات الاستباقية الفورية للموظف")
     
-    st.error(f"تنبيه استباقي موجه إلى [{alert['department']}]: {alert['detected_issue']}")
+    current_al = st.session_state.employee_current_alert
     
-    with st.form("employee_action_form"):
-        st.write("معرّف الأصول / السيرفر:", alert["device_id"])
-        st.write("طبيعة الحدث المرصود:", alert["detected_issue"])
-        
-        action_note = st.text_input("تسجيل ملاحظات التعامل الأولي الميداني:")
-        submitted = st.form_submit_button("اعتماد وتصعيد البلاغ الاستباقي إلى قسم الاختصاص")
-        
-        if submitted:
-            new_ticket = {
-                "القسم المسؤول": alert["department"],
-                "المعرف التقني": alert["device_id"],
-                "وصف المشكلة الاستباقية": alert["detected_issue"],
-                "ملاحظات الموظف": action_note if action_note else "لا توجد ملاحظات",
-                "الحالة": "قيد المعالجة الاستباقية"
-            }
-            st.session_state.tickets.append(new_ticket)
-            st.success("تم إرسال البلاغ وتوثيقه في السجل المركزى بنجاح.")
-            st.session_state.current_alert = get_proactive_alert()
-            st.rerun()
+    st.write("تفاصيل الجهاز المرصود تلقائياً في النظام:")
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("اسم الجهاز", current_al["device_name"])
+    col_b.metric("الموقع داخل المستشفى", current_al["location"])
+    col_c.metric("نوع التنبيه", current_al["alert_type"])
+    
+    st.error(f"حالة الإنذار الاستباقي: {current_al['issue_desc']}")
+    
+    if st.button("موافق (OK) - إرسال البلاغ تلقائياً إلى قسم الـ IT المختص"):
+        target_dept = "قسم الأنظمة والتطبيقات" if current_al["alert_type"] == "تقني" else "قسم الدعم الفني"
+        new_ticket = {
+            "القسم المسؤول": target_dept,
+            "اسم الجهاز": current_al["device_name"],
+            "الموقع": current_al["location"],
+            "نوع التنبيه": current_al["alert_type"],
+            "الحالة": "مفتوحة وعاجلة"
+        }
+        st.session_state.tickets.append(new_ticket)
+        st.success("تم إرسال البلاغ بنجاح إلى قسم الـ IT المختص.")
+        st.session_state.employee_current_alert = get_employee_alert()
+        st.rerun()
 
-# 2. إدارة الصحة الإلكترونية وقسم الجودة (صناع القرار والرسومات البيانية)
-with tab2:
-    st.subheader("لوحة تحكم إدارة الصحة الإلكترونية واتخاذ القرار (مدمج معها قسم الجودة)")
+# ---------------------------------------------------------------------------
+# 2. شاشة الإدارة العليا
+# ---------------------------------------------------------------------------
+with main_tab2:
+    st.subheader("لوحة مؤشرات الأداء الاستراتيجية والرسوم البيانية للإدارة العليا")
     
-    quality_pass = st.text_input("أدخل كود اعتماد صلاحيات الإدارة العليا والجودة:", type="password", key="quality_login")
+    admin_pass = st.text_input("أدخل رمز الدخول الخاص بالإدارة العليا:", type="password", key="admin_top_pass")
     
-    if quality_pass == "quality2026" or quality_pass == "mgmt999":
-        st.success("تم اعتماد الصلاحية بنجاح. عرض المؤشرات والرسومات التحليلية الاستراتيجية:")
+    if admin_pass == "mgmt999":
+        st.success("تم التحقق من صلاحيات الإدارة العليا بنجاح.")
         
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-        kpi1.metric("مؤشر استقرار البنية والروابط", "98.7%", "+0.4%")
-        kpi2.metric("الأعطال المتلافة استباقياً", str(len(st.session_state.tickets) + 19), "+5")
-        kpi3.metric("معدل امتثال معايير الجودة التقنية", "99.2%", "مستقر")
-        kpi4.metric("إجمالي البلاغات النشطة", len(st.session_state.tickets), "متابعة")
+        kpi_1, kpi_2, kpi_3, kpi_4 = st.columns(4)
+        kpi_1.metric("مؤشر استقرار البنية التحتية", "98.9%", "+0.5%")
+        kpi_2.metric("إجمالي الأعطال المتلافة استباقياً", "142", "+12")
+        kpi_3.metric("نسبة كفاءة التشغيل الطبي التقني", "99.4%", "مستقر")
+        kpi_4.metric("إجمالي البلاغات المسجلة حالياً", len(st.session_state.tickets), "متابعة")
         
         st.markdown("---")
-        st.write("### التحليلات الرسومية لدعم اتخاذ القرار الاستراتيجي")
+        st.write("الرسوم البيانية الاستراتيجية لكفاءة أقسام المستشفى:")
         
-        chart_data = pd.DataFrame({
-            'التخصص التقني': ['البنية التحتية', 'الأنظمة والتطبيقات', 'الدعم الفني', 'إدارة الجودة'],
-            'كفاءة التشغيل (%)': [98, 95, 97, 99],
-            'عدد التنبيهات المعالجة': [12, 18, 25, 8]
+        strat_data = pd.DataFrame({
+            'القسم': ['البنية التحتية', 'الأنظمة والتطبيقات', 'الدعم الفني', 'إدارة الجودة'],
+            'معدل الاستجابة السريعة (%)': [99, 96, 98, 99.5]
         })
+        st.bar_chart(strat_data.set_index('القسم'))
         
-        st.bar_chart(chart_data.set_index('التخصص التقني'))
-        
-        st.info("تتيح هذه المؤشرات لصناع القرار في إدارة الصحة الإلكترونية والجودة اعتماد خطط التطوير الفوري وتوجيه فرق الصيانة قبل تفاقم أي انحراف تشغيلي.")
-        
-    elif quality_pass:
-        st.warning("رمز الصلاحية غير صحيح. يرجى مراجعة إدارة النظام.")
+    elif admin_pass:
+        st.warning("رمز الدخول غير صحيح.")
     else:
-        st.info("يرجى إدخال رمز المرور الخاص بإدارة الصحة الإلكترونية وقسم الجودة لعرض لوحات التحكم والرسومات البيانية.")
+        st.info("يرجى إدخال كلمة المرور للاطلاع على مؤشرات الإدارة العليا.")
 
-# 3. قسم البنية التحتية (جاهزية الداتا سنتر، أحمال الشبكة، وحرارة المعالجات)
-with tab3:
-    st.subheader("قسم البنية التحتية - مراقبة الداتا سنتر والحرارة والأحمال")
+# ---------------------------------------------------------------------------
+# 3. شاشة قسم الـ IT (قائمة منسدلة للأقسام الفرعية والمهام الاستباقية)
+# ---------------------------------------------------------------------------
+with main_tab3:
+    st.subheader("بوابة إدارة الـ IT والأقسام التخصصية")
     
-    infra_pass = st.text_input("أدخل كود صلاحيات قسم البنية التحتية:", type="password", key="infra_login")
+    it_sub_section = st.selectbox(
+        "اختر القسم التخصصي:",
+        [
+            "اختر القسم...",
+            "موظف الدعم الفني",
+            "موظف الأنظمة والتطبيقات",
+            "موظف البنية التحتية",
+            "مدير الجودة",
+            "مدير الصحة الإلكترونية"
+        ]
+    )
     
-    if infra_pass == "infra123":
-        st.success("تم تفعيل واجهة مراقبة البنية التحتية والبيانات الحية:")
-        
-        col_inf1, col_inf2, col_inf3 = st.columns(3)
-        col_inf1.metric("حرارة معالجات السيرفرات (CPU)", "41.5 C", "طبيعي مستقر")
-        col_inf2.metric("أحمال السويتشات الرئيسية (Throughput)", "68.4%", "ضمن الآمن")
-        col_inf3.metric("جاهزية واستمرارية الداتا سنتر", "99.99%", "ممتاز")
-        
-        st.markdown("---")
-        st.write("#### المهام الاستباقية المرصودة في البنية التحتية:")
-        st.warning("تنبيه استباقي: يتم فحص وحدات التبريد ومراقبة أي ضغط استثنائي محتمل على السويتشات المركزية قبل حدوث أي اختناق في حركة البيانات.")
-        
-        if st.session_state.tickets:
-            infra_tickets = [t for t in st.session_state.tickets if "البنية التحتية" in t["القسم المسؤول"]]
+    # 3.1. موظف الدعم الفني (يتضمن الرسم البياني وإحصائيات وتحميل ملف الأجهزة)
+    if it_sub_section == "موظف الدعم الفني":
+        st.write("### واجهة موظف الدعم الفني وإحصائيات الأجهزة")
+        sup_pass = st.text_input("أدخل رمز الدخول لقسم الدعم الفني:", type="password", key="pass_sup")
+        if sup_pass == "sup123":
+            st.success("تم الدخول لواجهة الدعم الفني بنجاح.")
+            
+            st.write("المهام والاستجابة لبلاغات الهاردوير والأجهزة الطرفية:")
+            support_tickets = [t for t in st.session_state.tickets if t["القسم المسؤول"] == "قسم الدعم الفني"]
+            if support_tickets:
+                st.table(pd.DataFrame(support_tickets))
+            else:
+                st.info("لا توجد بلاغات معلقة للدعم الفني حالياً.")
+                
+            st.markdown("---")
+            st.subheader("إحصائيات وتحليلات أعطال الأجهزة")
+            
+            monthly_data = pd.DataFrame({
+                'الشهر': ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس'],
+                'عدد البلاغات الاستباقية': [14, 19, 12, 22, 17, 25, 20, len(st.session_state.tickets) + 15]
+            })
+            st.bar_chart(monthly_data.set_index('الشهر'))
+            
+            st.write("سحب إحصائيات الأجهزة الشاملة لمعرفة أكثر الأقسام تعطلًا للأجهزة:")
+            csv_file = generate_excel_stats()
+            st.download_button(
+                label="تحميل ملف إحصائيات الأجهزة (Excel/CSV)",
+                data=csv_file,
+                file_name="Hospital_Devices_Failure_Statistics.csv",
+                mime="text/csv"
+            )
+        elif sup_pass:
+            st.warning("رمز الدخول غير صحيح.")
+
+    # 3.2. موظف الأنظمة والتطبيقات
+    elif it_sub_section == "موظف الأنظمة والتطبيقات":
+        st.write("### واجهة موظف الأنظمة والتطبيقات")
+        sys_pass = st.text_input("أدخل رمز الدخول لقسم الأنظمة والتطبيقات:", type="password", key="pass_sys")
+        if sys_pass == "sys123":
+            st.success("تم الدخول لواجهة الأنظمة والتطبيقات بنجاح.")
+            st.metric("مراقبة استقرار الروابط (Link Stability)", "99.2%", "مستقر بدون تذبذب حرج")
+            st.write("المهام الاستباقية: مراقبة مستمرة للروابط والتأكد من عدم وجود أي تذبذب بين التطبيقات وقواعد البيانات.")
+            
+            sys_tickets = [t for t in st.session_state.tickets if t["القسم المسؤول"] == "قسم الأنظمة والتطبيقات"]
+            if sys_tickets:
+                st.table(pd.DataFrame(sys_tickets))
+            else:
+                st.info("لا توجد بلاغات معلقة للأنظمة والتطبيقات.")
+        elif sys_pass:
+            st.warning("رمز الدخول غير صحيح.")
+
+    # 3.3. موظف البنية التحتية
+    elif it_sub_section == "موظف البنية التحتية":
+        st.write("### واجهة موظف البنية التحتية")
+        inf_pass = st.text_input("أدخل رمز الدخول لقسم البنية التحتية:", type="password", key="pass_inf")
+        if inf_pass == "infra123":
+            st.success("تم الدخول لواجهة البنية التحتية بنجاح.")
+            
+            c_inf1, c_inf2, c_inf3 = st.columns(3)
+            c_inf1.metric("جاهزية الداتا سنتر", "99.99%", "ممتاز")
+            c_inf2.metric("أحمال الشبكة والسويتشات", "67.3%", "مستقر وآمن")
+            c_inf3.metric("حرارة معالجات السيرفرات (CPU)", "41.2 C", "ضمن المعتاد")
+            
+            st.warning("التنبيه الاستباقي للبنية التحتية: رصد مستمر لأحمال السويتشات ودرجات حرارة المعالجات لتفادي أي اختناق في البيانات.")
+            
+            infra_tickets = [t for t in st.session_state.tickets if t["القسم المسؤول"] == "قسم البنية التحتية"]
             if infra_tickets:
-                st.write("البلاغات الخاصة بالبنية التحتية:")
                 st.table(pd.DataFrame(infra_tickets))
             else:
-                st.info("لا توجد بلاغات عاجلة مسجلة على البنية التحتية حالياً.")
-        
-    elif infra_pass:
-        st.warning("رمز الدخول لقسم البنية التحتية غير صحيح.")
-    else:
-        st.info("يرجى إدخال رمز المرور الخاص بفريق البنية التحتية للاطلاع على قراءات الداتا سنتر وأحمال الشبكة.")
+                st.info("لا توجد بلاغات معلقة للبنية التحتية.")
+        elif inf_pass:
+            st.warning("رمز الدخول غير صحيح.")
 
-# 4. قسم الأنظمة والتطبيقات والدعم الفني (استقرار الروابط والتذبذب)
-with tab4:
-    st.subheader("قسم الأنظمة والتطبيقات ودعم الروابط")
-    
-    sys_pass = st.text_input("أدخل كود صلاحيات قسم الأنظمة والتطبيقات:", type="password", key="sys_login")
-    
-    if sys_pass == "sys123":
-        st.success("تم تفعيل واجهة مراقبة الروابط والتطبيقات الحية:")
-        
-        s_col1, s_col2 = st.columns(2)
-        s_col1.metric("استقرار روابط الاتصال بالأنظمة الطبية", "99.4%", "مستقر (بدون تذبذب حرج)")
-        s_col2.metric("استجابة قواعد البيانات الاستعلامية", "14 ms", "أداء عالي")
-        
-        st.markdown("---")
-        st.write("#### مراقبة التذبذب واستقرار الروابط (Link Jitter & Stability):")
-        st.info("النظام يقوم بمراقبة مستمرة لتجنب أي تذبذب في الاتصال بين وحدات الأقسام الطبية وقواعد البيانات المركزية لتأمين استمرار تدفق البيانات الطبية بلا انقطاع.")
-        
-        if st.session_state.tickets:
-            sys_tickets = [t for t in st.session_state.tickets if "الأنظمة والتطبيقات" in t["القسم المسؤول"] or "الدعم الفني" in t["القسم المسؤول"]]
-            if sys_tickets:
-                st.write("سجل التذاكر والبلاغات المعلقة للأنظمة والتطبيقات:")
-                st.table(pd.DataFrame(sys_tickets))
-                
-                if st.button("تحديث وإغلاق البلاغات المعالجة في الأنظمة"):
-                    st.session_state.tickets = [t for t in st.session_state.tickets if t not in sys_tickets]
-                    st.success("تم إغلاق وتحديث البلاغات بنجاح.")
-                    st.rerun()
-            else:
-                st.info("لا توجد بلاغات معلقة تخص الأنظمة والتطبيقات.")
-                
-        csv_data = generate_stats_csv()
-        if csv_data:
-            st.download_button("تصدير تقرير النظام الشامل (CSV)", data=csv_data, file_name="VisiPulse_Official_Report.csv", mime="text/csv")
-            
-    elif sys_pass:
-        st.warning("رمز الدخول لقسم الأنظمة غير صحيح.")
-    else:
-        st.info("يرجى إدخال رمز المرور الخاص بقسم الأنظمة والتطبيقات لمتابعة حالة الروابط والتذبذب.")
+    # 3.4. مدير الجودة
+    elif it_sub_section == "مدير الجودة":
+        st.write("### واجهة مدير الجودة")
+        q_pass = st.text_input("أدخل رمز الدخول لقسم الجودة:", type="password", key="pass_q")
+        if q_pass == "quality2026":
+            st.success("تم الدخول لواجهة إدارة الجودة بنجاح.")
+            st.metric("معدل امتثال المعايير التقنية والصحية", "99.3%", "مستقر")
+            st.info("المهام الاستباقية: رصد الفجوات في مؤشرات الأداء التقني ومعايير الاعتماد المؤسسي واتخاذ التدابير التصحيحية.")
+        elif q_pass:
+            st.warning("رمز الدخول غير صحيح.")
+
+    # 3.5. مدير الصحة الإلكترونية
+    elif it_sub_section == "مدير الصحة الإلكترونية":
+        st.write("### واجهة إدارة الصحة الإلكترونية")
+        ehealth_pass = st.text_input("أدخل رمز الدخول لإدارة الصحة الإلكترونية:", type="password", key="pass_eh")
+        if ehealth_pass == "mgmt999":
+            st.success("تم الدخول لواجهة إدارة الصحة الإلكترونية بنجاح.")
+            st.metric("كفاءة التكامل الشامل للأنظمة الطبية", "99.1%", "عالي")
+            st.info("المهام: الإشراف العام على الأقسام المندرجة وتحليل تقارير الأداء الشاملة لصناع القرار.")
+        elif ehealth_pass:
+            st.warning("رمز الدخول غير صحيح.")
