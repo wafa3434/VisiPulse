@@ -1,5 +1,5 @@
 streamlit==1.38.0
-pandas==2.2.1
+pandas
 bcrypt==4.2.0
 python-dotenv==1.0.1
 SQLAlchemy==2.0.32
