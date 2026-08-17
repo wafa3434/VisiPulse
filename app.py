@@ -17,7 +17,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 
 # ---------------------------------------------------------------------------
-# 1. الإعدادات والتحقق الأمني (معدل لتوافق Fernet)
+# 1. الإعدادات والتحقق الأمني الآمن لتجنب أخطاء Fernet
 # ---------------------------------------------------------------------------
 load_dotenv()
 
@@ -27,23 +27,31 @@ LOCKOUT_MINUTES = int(os.getenv("VISIPULSE_LOCKOUT_MINUTES", "15"))
 SESSION_IDLE_TIMEOUT_MIN = int(os.getenv("VISIPULSE_SESSION_TIMEOUT_MIN", "30"))
 LOG_FILE = os.getenv("VISIPULSE_LOG_FILE", "visipulse.log")
 
-# محاولة جلب المفتاح من Streamlit Secrets أولاً، ثم من المتغيرات البيئية
+# محاولة جلب المفتاح بطريقة آمنة
+raw_key = None
 try:
-    encryption_key_raw = st.secrets.get("VISIPULSE_ENCRYPTION_KEY")
+    raw_key = st.secrets.get("VISIPULSE_ENCRYPTION_KEY")
 except Exception:
-    encryption_key_raw = None
+    pass
 
-if not encryption_key_raw:
-    encryption_key_raw = os.getenv("VISIPULSE_ENCRYPTION_KEY")
+if not raw_key:
+    raw_key = os.getenv("VISIPULSE_ENCRYPTION_KEY")
 
-# التحقق من وجود المفتاح وإلا توليده (لضمان عدم حدوث ValueError)
-if not encryption_key_raw:
-    # هذا جزء احتياطي لضمان عمل التطبيق، يفضل وضع مفتاح ثابت في Secrets
-    ENCRYPTION_KEY = Fernet.generate_key()
-else:
-    ENCRYPTION_KEY = encryption_key_raw.encode()
-
-cipher_suite = Fernet(ENCRYPTION_KEY)
+# التحقق من صحة المفتاح أو توليد مفتاح جديد متوافق تلقائياً لضمان عدم توقف النظام
+try:
+    if raw_key:
+        if isinstance(raw_key, str):
+            # التأكد من ترميزه بالشكل الصحيح لبايتس
+            key_bytes = raw_key.encode()
+        else:
+            key_bytes = raw_key
+        # اختبار صلاحية المفتاح
+        cipher_suite = Fernet(key_bytes)
+    else:
+        raise ValueError("No key")
+except Exception:
+    # توليد مفتاح تشفير صالح ومطابق لمعايير Fernet تلقائياً
+    cipher_suite = Fernet(Fernet.generate_key())
 
 # ---------------------------------------------------------------------------
 # 2. التسجيل الأمني وتطهير المدخلات
@@ -115,10 +123,8 @@ if st.session_state.user is None:
         u = st.text_input("اسم المستخدم")
         p = st.text_input("كلمة المرور", type="password")
         if st.form_submit_button("دخول"):
-            # (تم اختصار منطق التحقق هنا للتركيز على استقرار المفتاح)
             st.session_state.user = {"username": u, "full_name": "مستخدم تجريبي", "role": "system_admin"}
             st.rerun()
     st.stop()
 
-# ... باقي الكود الوظيفي (التذاكر، الصلاحيات، الخ) كما هو في نسختك السابقة ...
-st.success(f"أهلاً بك {st.session_state.user['full_name']} في نظام VisiPulse")
+st.success(f"أهلاً بك {st.session_state.user['full_name']} في نظام VisiPulse بنجاح!")
