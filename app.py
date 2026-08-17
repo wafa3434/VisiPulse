@@ -27,11 +27,15 @@ LOCKOUT_MINUTES = int(os.getenv("VISIPULSE_LOCKOUT_MINUTES", "15"))
 SESSION_IDLE_TIMEOUT_MIN = int(os.getenv("VISIPULSE_SESSION_TIMEOUT_MIN", "30"))
 LOG_FILE = os.getenv("VISIPULSE_LOG_FILE", "visipulse.log")
 
-# معالجة ثغرة مفتاح التشفير الافتراضي: إيقاف النظام فورا إذا لم يوجد المفتاح
+# معالجة ثغرة مفتاح التشفير: البحث في البيئة المحلية أولاً ثم في Streamlit Secrets
 ENCRYPTION_KEY = os.getenv("VISIPULSE_ENCRYPTION_KEY")
+
 if not ENCRYPTION_KEY:
-    st.error("خطأ حرج في الأمان السيبراني: لم يتم العثور على مفتاح التشفير VISIPULSE_ENCRYPTION_KEY في ملف .env. تم إيقاف النظام حفاظاً على سرية البيانات.")
-    st.stop()
+    try:
+        ENCRYPTION_KEY = st.secrets["VISIPULSE_ENCRYPTION_KEY"]
+    except Exception:
+        st.error("خطأ حرج في الأمان السيبراني: لم يتم العثور على مفتاح التشفير VISIPULSE_ENCRYPTION_KEY لا في ملف .env ولا في Streamlit Secrets. تم إيقاف النظام حفاظاً على سرية البيانات.")
+        st.stop()
 
 cipher_suite = Fernet(ENCRYPTION_KEY.encode())
 
@@ -354,4 +358,4 @@ except PermissionError as pe:
 # ذيل الصفحة التوثيقي
 # ---------------------------------------------------------------------------
 st.markdown("---")
-st.caption("نظام VisiPulse المحوسب - مطور ومحكم برمجياً ليتوافق مع سياسات حوكمة البيانات الوطنية ومعايير سباهي (CBAHI).")
+st.caption("نظام VisiPulse -Secure Health Cluster System - متوافق مع معايير الأمن السيبراني NCA وحوكمة الصحة الرقمية CBAHI")
