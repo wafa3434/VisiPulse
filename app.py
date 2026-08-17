@@ -46,7 +46,7 @@ except Exception:
     cipher_suite = Fernet(Fernet.generate_key())
 
 # ---------------------------------------------------------------------------
-# 2. التسجيل الأمني (Audit Logging) والتشفير وتطهير المدخلات
+# 2. التسجيل الأمني والتشفير وتطهير المدخلات
 # ---------------------------------------------------------------------------
 logging.basicConfig(
     filename=LOG_FILE,
@@ -194,10 +194,33 @@ def get_tickets_df(search_term=None):
     return df
 
 # ---------------------------------------------------------------------------
-# 5. واجهة الاستخدام والترويسات الكاملة
+# 5. واجهة الاستخدام (الشعار، الترجمة، واسم النظام فقط)
 # ---------------------------------------------------------------------------
-st.set_page_config(page_title="VisiPulse - Secure Health Cluster System", layout="wide")
+st.set_page_config(page_title="VisiPulse", layout="wide")
 init_db()
+
+# قائمة خيار الترجمة في أعلى الصفحة
+col_lang1, col_lang2 = st.columns([8, 2])
+with col_lang2:
+    selected_lang = st.selectbox("Language / اللغة", ["العربية", "English"], label_visibility="collapsed")
+
+# قاموس الترجمة لتغيير النصوص حسب الاختيار
+t = {
+    "العربية": {
+        "user": "اسم المستخدم (Username)",
+        "pass": "كلمة المرور الآمنة (Password)",
+        "btn": "تحقق ودخول",
+    },
+    "English": {
+        "user": "Username",
+        "pass": "Password",
+        "btn": "Verify & Login",
+    }
+}
+lang_key = "العربية" if selected_lang == "العربية" else "English"
+
+# رابط الشعار المباشر من GitHub (تأكدي من صحة اسم المستخدم والمستودع)
+LOGO_URL = "https://raw.githubusercontent.com/Wafaa-Aglan/VisiPulse/main/logo.jpeg"
 
 if "last_activity" not in st.session_state:
     st.session_state.last_activity = time.time()
@@ -212,13 +235,19 @@ else:
     st.session_state.last_activity = time.time()
 
 if st.session_state.user is None:
-    st.markdown("<h2 style='text-align: center; color: #1a5276;'>بوابة الدخول الآمن لنظام VisiPulse (متوافق مع CBAHI & NCA)</h2>", unsafe_allow_html=True)
+    # تنسيق متمركز للشعار واسم النظام فقط
+    col_img1, col_img2, col_img3 = st.columns([1, 1, 1])
+    with col_img2:
+        st.image(LOGO_URL, width=150)
+    
+    st.markdown("<h1 style='text-align: center; color: #1a5276;'>VisiPulse</h1>", unsafe_allow_html=True)
+    
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
         with st.form("secure_login"):
-            u = st.text_input("اسم المستخدم (Username)")
-            p = st.text_input("كلمة المرور الآمنة (Password)", type="password")
-            submitted = st.form_submit_button("تحقق ودخول")
+            u = st.text_input(t[lang_key]['user'])
+            p = st.text_input(t[lang_key]['pass'], type="password")
+            submitted = st.form_submit_button(t[lang_key]['btn'])
             if submitted:
                 user_data, err = verify_login(u, p)
                 if user_data:
