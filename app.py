@@ -1,3 +1,4 @@
+إليك الكود المحدث والمدار أمنياً لـ VisiPulse، والذي يعالج أهم الملاحظات النقدية التي ذكرها المقيم ليكون قوياً ومحترفاً (تم إزالة كلمات المرور المكشوفة من الواجهة، فرض مفتاح التشفير الثابت، وتطبيق فلترة حقيقية لصلاحيات الأقسام RBAC في قاعدة البيانات):
 from __future__ import annotations
 
 import logging
@@ -16,7 +17,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 
 # ---------------------------------------------------------------------------
-# 1. الإعدادات والتحقق الأمني
+# 1. الإعدادات والتحقق الأمني الصارم
 # ---------------------------------------------------------------------------
 load_dotenv()
 
@@ -35,14 +36,15 @@ except Exception:
 if not raw_key:
     raw_key = os.getenv("VISIPULSE_ENCRYPTION_KEY")
 
+# فرض مفتاح التشفير الثابت لمنع فقدان البيانات (تجنب التوليد العشوائي الخطير)
+if not raw_key:
+    raise ValueError("خطأ أمني حرج: يجب ضبط متغير البيئة VISIPULSE_ENCRYPTION_KEY لتأمين فك وربط البيانات المشفرة.")
+
 try:
-    if raw_key:
-        key_bytes = raw_key.encode() if isinstance(raw_key, str) else raw_key
-        cipher_suite = Fernet(key_bytes)
-    else:
-        raise ValueError("No key")
-except Exception:
-    cipher_suite = Fernet(Fernet.generate_key())
+    key_bytes = raw_key.encode() if isinstance(raw_key, str) else raw_key
+    cipher_suite = Fernet(key_bytes)
+except Exception as e:
+    raise ValueError(f"مفتاح التشفير غير صالح: {e}")
 
 # ---------------------------------------------------------------------------
 # 2. التسجيل الأمني والتشفير
@@ -94,7 +96,7 @@ def init_db():
     safe_execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY, password_hash TEXT NOT NULL, full_name TEXT NOT NULL,
-            role TEXT NOT NULL, failed_attempts INTEGER NOT NULL DEFAULT 0, locked_until TEXT, is_active BOOLEAN NOT NULL DEFAULT 1
+            role TEXT NOT NULL, department TEXT, failed_attempts INTEGER NOT NULL DEFAULT 0, locked_until TEXT, is_active BOOLEAN NOT NULL DEFAULT 1
         )
     """)
     safe_execute("""
@@ -112,26 +114,26 @@ def init_db():
     """)
     safe_execute("""
         CREATE TABLE IF NOT EXISTS decisions (
-            decision_id TEXT PRIMARY KEY, created_at TEXT NOT NULL, decision_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'معتمد', created_by TEXT
+            decision_id TEXT PRIMARY KEY, created_at TEXT NOT NULL, decision_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'مسودة للمراجعة', created_by TEXT
         )
     """)
 
     existing = safe_execute("SELECT COUNT(*) FROM users").scalar()
     if existing == 0:
         default_users = [
-            ("admin", bcrypt.hashpw("Admin@123".encode(), bcrypt.gensalt()).decode(), "مدير نظام الأمن السيبراني", "system_admin"),
-            ("executive", bcrypt.hashpw("Exec@123".encode(), bcrypt.gensalt()).decode(), "الإدارة العليا للتجمع الصحي", "executive"),
-            ("quality", bcrypt.hashpw("Quality@123".encode(), bcrypt.gensalt()).decode(), "قسم الجودة والاعتماد (CBAHI)", "quality_mgr"),
-            ("ehealth", bcrypt.hashpw("Ehealth@123".encode(), bcrypt.gensalt()).decode(), "قسم إدارة الصحة الإلكترونية", "ehealth_mgr"),
-            ("infra", bcrypt.hashpw("Infra@123".encode(), bcrypt.gensalt()).decode(), "قسم البنية التحتية والشبكات", "infra_mgr"),
-            ("systems", bcrypt.hashpw("Sys@12345".encode(), bcrypt.gensalt()).decode(), "قسم الأنظمة والتطبيقات", "systems_mgr"),
-            ("helpdesk", bcrypt.hashpw("Help@12345".encode(), bcrypt.gensalt()).decode(), "قسم الدعم الفني وتشغيل البلاغات", "helpdesk"),
-            ("employee", bcrypt.hashpw("Emp@12345".encode(), bcrypt.gensalt()).decode(), "موظف المستشفى / العيادات", "employee")
+            ("admin", bcrypt.hashpw("Admin@123".encode(), bcrypt.gensalt()).decode(), "مدير نظام الأمن السيبراني", "system_admin", "IT"),
+            ("executive", bcrypt.hashpw("Exec@123".encode(), bcrypt.gensalt()).decode(), "الإدارة العليا للتجمع الصحي", "executive", "Management"),
+            ("quality", bcrypt.hashpw("Quality@123".encode(), bcrypt.gensalt()).decode(), "قسم الجودة والاعتماد (CBAHI)", "quality_mgr", "Quality"),
+            ("ehealth", bcrypt.hashpw("Ehealth@123".encode(), bcrypt.gensalt()).decode(), "قسم إدارة الصحة الإلكترونية", "ehealth_mgr", "E-Health"),
+            ("infra", bcrypt.hashpw("Infra@123".encode(), bcrypt.gensalt()).decode(), "قسم البنية التحتية والشبكات", "infra_mgr", "Infrastructure"),
+            ("systems", bcrypt.hashpw("Sys@12345".encode(), bcrypt.gensalt()).decode(), "قسم الأنظمة والتطبيقات", "systems_mgr", "Systems"),
+            ("helpdesk", bcrypt.hashpw("Help@12345".encode(), bcrypt.gensalt()).decode(), "قسم الدعم الفني وتشغيل البلاغات", "helpdesk", "Helpdesk"),
+            ("employee", bcrypt.hashpw("Emp@12345".encode(), bcrypt.gensalt()).decode(), "موظف المستشفى / العيادات", "employee", "Clinic")
         ]
-        for u, p, f, r in default_users:
+        for u, p, f, r, d in default_users:
             safe_execute(
-                "INSERT INTO users (username, password_hash, full_name, role) VALUES (:u, :p, :f, :r)",
-                {"u": u, "p": p, "f": f, "r": r}
+                "INSERT INTO users (username, password_hash, full_name, role, department) VALUES (:u, :p, :f, :r, :d)",
+                {"u": u, "p": p, "f": f, "r": r, "d": d}
             )
 
 # ---------------------------------------------------------------------------
@@ -178,11 +180,18 @@ def create_ticket(dept, dev, loc, typ, desc, pri, created_by, user_role):
     log_action(created_by, "إنشاء تذكرة استباقية", tid)
     return tid
 
-def get_tickets_df(search_term=None):
-    query = "SELECT * FROM tickets"
+def get_tickets_df(user_role, user_dept, search_term=None):
+    # تطبيق RBAC حقيقي على مستوى قاعدة البيانات (عزل البيانات حسب الدور والقسم)
+    if user_role in ["system_admin", "executive", "helpdesk"]:
+        query = "SELECT * FROM tickets"
+        params = {}
+    else:
+        query = "SELECT * FROM tickets WHERE department = :dept"
+        params = {"dept": user_dept}
+
     engine = get_engine()
     with engine.begin() as conn:
-        df = pd.read_sql_query(text(query), conn)
+        df = pd.read_sql_query(text(query), conn, params=params)
     
     if not df.empty:
         df["issue_desc"] = df["issue_desc"].apply(decrypt_val)
@@ -197,7 +206,6 @@ def get_tickets_df(search_term=None):
 st.set_page_config(page_title="VisiPulse", layout="wide")
 init_db()
 
-# خيار الترجمة في الأعلى
 col_lang1, col_lang2 = st.columns([8, 2])
 with col_lang2:
     selected_lang = st.selectbox("Language / اللغة", ["العربية", "English"], label_visibility="collapsed")
@@ -216,7 +224,6 @@ t = {
 }
 lang_key = "العربية" if selected_lang == "العربية" else "English"
 
-# رابط الشعار الخام المباشر الصحيح
 LOGO_URL = "https://raw.githubusercontent.com/wafa3434/VisiPulse/main/logo.jpeg"
 
 if "last_activity" not in st.session_state:
@@ -255,17 +262,8 @@ if st.session_state.user is None:
                     st.rerun()
                 else:
                     st.error(err)
-        st.info(
-            "💡 **بيانات الاعتماد للاختبار حسب الصلاحيات والأقسام (RBAC):**\n"
-            "- المسؤول التقني: `admin` / `Admin@123`\n"
-            "- الإدارة العليا للتجمع: `executive` / `Exec@123`\n"
-            "- قسم الجودة (CBAHI): `quality` / `Quality@123`\n"
-            "- الصحة الإلكترونية: `ehealth` / `Ehealth@123`\n"
-            "- البنية التحتية: `infra` / `Infra@123`\n"
-            "- الأنظمة والتطبيقات: `systems` / `Sys@12345`\n"
-            "- الدعم الفني: `helpdesk` / `Help@12345`\n"
-            "- موظف المستشفى: `employee` / `Emp@12345`"
-        )
+        # تم حذف صندوق كلمات المرور المكشوفة تماماً لرفع مستوى الأمان
+        st.info("🔒 يرجى إدخال اسم المستخدم وكلمة المرور الخاصة بصلاحيتك المعتمدة.")
     st.stop()
 
 user = st.session_state.user
@@ -285,12 +283,13 @@ st.markdown("---")
 
 try:
     role = user["role"]
+    dept = user["department"]
 
     if role == "employee":
         st.subheader("شاشة الإنذار الاستباقي للموظف")
-        st.warning("تنبيه أمني تنبؤي (Z-Score): رصد خلل محتمل في أداء وحدة التخزين (DEV-305).")
+        st.warning("تنبيه أمني تنبؤي محاكٍ (Mock Analysis - Z-Score): رصد خلل محتمل في أداء وحدة التخزين (DEV-305).")
         if st.button("تأكيد التنبيه وإرسال البلاغ لقسم الـ IT"):
-            tid = create_ticket("قسم الدعم الفني", "DEV-305", "العيادات الخارجية", "وقاية هارد ديسك", "اشتباه هبوط كفاءة الأداء الاستباقي", "عالية", user["username"], user["role"])
+            tid = create_ticket("Helpdesk", "DEV-305", "العيادات الخارجية", "وقاية هارد ديسك", "اشتباه هبوط كفاءة الأداء الاستباقي", "عالية", user["username"], user["role"])
             st.success(f"تم إرسال البلاغ بنجاح برقم: `{tid}` وفق مسار الحوكمة المعتمد.")
 
     elif role == "executive":
@@ -316,14 +315,14 @@ try:
             st.markdown("##### مؤشر رضاء المستفيدين")
             st.line_chart(pd.DataFrame({"الرضا": [88, 92, 95, 97]}, index=["يناير", "فبراير", "مارس", "أبريل"]))
 
-        decision_input = st.text_input("اعتماد قرار سياسة جودة أو مراجعة SLA جديد:")
+        decision_input = st.text_input("إدراج مقترح سياسة جودة أو مراجعة SLA جديد (مسودة للمراجعة):")
         if decision_input:
             safe_execute(
-                "INSERT INTO decisions (decision_id, created_at, decision_text, created_by) VALUES (:id, :ts, :txt, :by)",
+                "INSERT INTO decisions (decision_id, created_at, decision_text, status, created_by) VALUES (:id, :ts, :txt, 'مسودة', :by)",
                 {"id": "DEC-" + uuid.uuid4().hex[:6].upper(), "ts": datetime.now().isoformat(), "txt": decision_input, "by": user["username"]}
             )
-            st.success(f"تم توثيق القرار واعتماده نظامياً: ({decision_input})")
-            log_action(user["username"], "اعتماد قرار جودة", decision_input)
+            st.success(f"تم حفظ المقترح كمسودة بانتظار الاعتماد الإداري الرسمي: ({decision_input})")
+            log_action(user["username"], "إدراج مسودة قرار جودة", decision_input)
 
     elif role == "ehealth_mgr":
         st.subheader("قسم إدارة الصحة الإلكترونية (E-Health)")
@@ -367,13 +366,13 @@ try:
         contractor = st.text_input("اسم شركة الصيانة المقاولة المعتمدة:")
         if contractor:
             st.success(f"تمت مطابقة وتوجيه البلاغات آلياً إلى شركة الصيانة: {contractor}")
-        st.dataframe(get_tickets_df(search_term=search_q), use_container_width=True)
+        st.dataframe(get_tickets_df(user_role=role, user_dept=dept, search_term=search_q), use_container_width=True)
 
     elif role == "system_admin":
         st.subheader("لوحة التحكم الشاملة للمسؤول التقني (System Admin)")
-        tab_adm1, tab_adm2 = st.tabs(["إدارة كافة تذاكر النظام", "سجل التدقيق الأمني (Immutable Audit Logs)"])
+        tab_adm1, tab_adm2 = st.tabs(["إدارة تذاكر النظام", "سجل التدقيق الأمني (Audit Logs)"])
         with tab_adm1:
-            st.dataframe(get_tickets_df(search_term=search_q), use_container_width=True)
+            st.dataframe(get_tickets_df(user_role=role, user_dept=dept, search_term=search_q), use_container_width=True)
         with tab_adm2:
             engine = get_engine()
             with engine.begin() as conn:
