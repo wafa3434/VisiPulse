@@ -17,7 +17,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 
 # ---------------------------------------------------------------------------
-# 1. الإعدادات والتحقق الأمني وحل مشكلة مفتاح التشفير
+# 1. الإعدادات والتحقق الأمني
 # ---------------------------------------------------------------------------
 load_dotenv()
 
@@ -46,7 +46,7 @@ except Exception:
     cipher_suite = Fernet(Fernet.generate_key())
 
 # ---------------------------------------------------------------------------
-# 2. التسجيل الأمني والتشفير وتطهير المدخلات
+# 2. التسجيل الأمني والتشفير
 # ---------------------------------------------------------------------------
 logging.basicConfig(
     filename=LOG_FILE,
@@ -121,8 +121,12 @@ def init_db():
     if existing == 0:
         default_users = [
             ("admin", bcrypt.hashpw("Admin@123".encode(), bcrypt.gensalt()).decode(), "مدير نظام الأمن السيبراني", "system_admin"),
-            ("quality", bcrypt.hashpw("Quality@123".encode(), bcrypt.gensalt()).decode(), "مدير إدارة الجودة (CBAHI)", "quality_mgr"),
-            ("it_lead", bcrypt.hashpw("It@12345".encode(), bcrypt.gensalt()).decode(), "قائد تقنية المعلومات والتشغيل", "it_lead"),
+            ("executive", bcrypt.hashpw("Exec@123".encode(), bcrypt.gensalt()).decode(), "الإدارة العليا للتجمع الصحي", "executive"),
+            ("quality", bcrypt.hashpw("Quality@123".encode(), bcrypt.gensalt()).decode(), "قسم الجودة والاعتماد (CBAHI)", "quality_mgr"),
+            ("ehealth", bcrypt.hashpw("Ehealth@123".encode(), bcrypt.gensalt()).decode(), "قسم إدارة الصحة الإلكترونية", "ehealth_mgr"),
+            ("infra", bcrypt.hashpw("Infra@123".encode(), bcrypt.gensalt()).decode(), "قسم البنية التحتية والشبكات", "infra_mgr"),
+            ("systems", bcrypt.hashpw("Sys@12345".encode(), bcrypt.gensalt()).decode(), "قسم الأنظمة والتطبيقات", "systems_mgr"),
+            ("helpdesk", bcrypt.hashpw("Help@12345".encode(), bcrypt.gensalt()).decode(), "قسم الدعم الفني وتشغيل البلاغات", "helpdesk"),
             ("employee", bcrypt.hashpw("Emp@12345".encode(), bcrypt.gensalt()).decode(), "موظف المستشفى / العيادات", "employee")
         ]
         for u, p, f, r in default_users:
@@ -165,11 +169,10 @@ def verify_login(username: str, password: str):
     return None, "كلمة المرور أو اسم المستخدم غير صحيح."
 
 def check_authorization(required_roles: list[str], user_role: str):
-    if user_role not in required_roles:
+    if user_role not in required_roles and user_role != "system_admin":
         raise PermissionError("خطأ أمني: لا تملك الصلاحية التقنية لتنفيذ هذه العملية.")
 
 def create_ticket(dept, dev, loc, typ, desc, pri, created_by, user_role):
-    check_authorization(["employee", "it_lead", "system_admin", "quality_mgr"], user_role)
     tid = "TCK-" + uuid.uuid4().hex[:8].upper()
     safe_execute(
         """INSERT INTO tickets (ticket_id, created_at, department, device_name, location, alert_type, issue_desc, priority, created_by)
@@ -194,17 +197,16 @@ def get_tickets_df(search_term=None):
     return df
 
 # ---------------------------------------------------------------------------
-# 5. واجهة الاستخدام (الشعار، الترجمة، واسم النظام فقط)
+# 5. واجهة الاستخدام
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="VisiPulse", layout="wide")
 init_db()
 
-# قائمة خيار الترجمة في أعلى الصفحة
+# خيار الترجمة في الأعلى
 col_lang1, col_lang2 = st.columns([8, 2])
 with col_lang2:
     selected_lang = st.selectbox("Language / اللغة", ["العربية", "English"], label_visibility="collapsed")
 
-# قاموس الترجمة لتغيير النصوص حسب الاختيار
 t = {
     "العربية": {
         "user": "اسم المستخدم (Username)",
@@ -219,7 +221,7 @@ t = {
 }
 lang_key = "العربية" if selected_lang == "العربية" else "English"
 
-# رابط الشعار المباشر من GitHub (تأكدي من صحة اسم المستخدم والمستودع)
+# رابط الشعار المباشر من GitHub
 LOGO_URL = "https://raw.githubusercontent.com/Wafaa-Aglan/VisiPulse/main/logo.jpeg"
 
 if "last_activity" not in st.session_state:
@@ -235,11 +237,13 @@ else:
     st.session_state.last_activity = time.time()
 
 if st.session_state.user is None:
-    # تنسيق متمركز للشعار واسم النظام فقط
-    col_img1, col_img2, col_img3 = st.columns([1, 1, 1])
-    with col_img2:
-        st.image(LOGO_URL, width=150)
-    
+    try:
+        col_img1, col_img2, col_img3 = st.columns([1, 1, 1])
+        with col_img2:
+            st.image(LOGO_URL, width=150)
+    except Exception:
+        pass
+
     st.markdown("<h1 style='text-align: center; color: #1a5276;'>VisiPulse</h1>", unsafe_allow_html=True)
     
     c1, c2, c3 = st.columns([1, 2, 1])
@@ -256,7 +260,17 @@ if st.session_state.user is None:
                     st.rerun()
                 else:
                     st.error(err)
-        st.info("💡 **بيانات الاعتماد للاختبار حسب الصلاحيات (RBAC):**\n- المسؤول التقني: `admin` / `Admin@123`\n- مدير الجودة: `quality` / `Quality@123`\n- تقنية المعلومات: `it_lead` / `It@12345`\n- موظف المستشفى: `employee` / `Emp@12345`")
+        st.info(
+            "💡 **بيانات الاعتماد للاختبار حسب الصلاحيات والأقسام (RBAC):**\n"
+            "- المسؤول التقني: `admin` / `Admin@123`\n"
+            "- الإدارة العليا للتجمع: `executive` / `Exec@123`\n"
+            "- قسم الجودة (CBAHI): `quality` / `Quality@123`\n"
+            "- الصحة الإلكترونية: `ehealth` / `Ehealth@123`\n"
+            "- البنية التحتية: `infra` / `Infra@123`\n"
+            "- الأنظمة والتطبيقات: `systems` / `Sys@12345`\n"
+            "- الدعم الفني: `helpdesk` / `Help@12345`\n"
+            "- موظف المستشفى: `employee` / `Emp@12345`"
+        )
     st.stop()
 
 user = st.session_state.user
@@ -275,18 +289,30 @@ st.markdown("<h2 style='text-align: center; color: #1a5276;'>VisiPulse - نظا�
 st.markdown("---")
 
 try:
-    if user["role"] == "employee":
+    role = user["role"]
+
+    if role == "employee":
         st.subheader("شاشة الإنذار الاستباقي للموظف")
         st.warning("تنبيه أمني تنبؤي (Z-Score): رصد خلل محتمل في أداء وحدة التخزين (DEV-305).")
         if st.button("تأكيد التنبيه وإرسال البلاغ لقسم الـ IT"):
             tid = create_ticket("قسم الدعم الفني", "DEV-305", "العيادات الخارجية", "وقاية هارد ديسك", "اشتباه هبوط كفاءة الأداء الاستباقي", "عالية", user["username"], user["role"])
             st.success(f"تم إرسال البلاغ بنجاح برقم: `{tid}` وفق مسار الحوكمة المعتمد.")
 
-    elif user["role"] == "quality_mgr":
-        check_authorization(["quality_mgr"], user["role"])
-        st.subheader("بوابة إدارة الجودة والامتثال لمعايير CBAHI")
-        st.info("متابعة مستويات الأداء (SLA) وسجلات الاعتماد الإداري والتحسين المستمر.")
-        
+    elif role == "executive":
+        st.subheader("بوابة الإدارة العليا للتجمع الصحي والمستشفى")
+        st.info("نظرة استراتيجية شاملة على مؤشرات الأداء الرئيسية (KPIs)، حوكمة الصحة الرقمية، والتوافق مع المعايير.")
+        col_e1, col_e2, col_e3 = st.columns(3)
+        with col_e1:
+            st.metric("معدل جاهزية المستشفيات", "98.4%", "+1.2%")
+        with col_e2:
+            st.metric("التنبؤات الاستباقية المعالجة", "142", "آمن")
+        with col_e3:
+            st.metric("نسبة رضا القيادة عن الأنظمة", "96.8%", "+2.1%")
+        st.bar_chart(pd.DataFrame({'مستوى الأداء الاستراتيجي': [92, 95, 98, 94]}, index=["Q1", "Q2", "Q3", "Q4"]))
+
+    elif role == "quality_mgr":
+        st.subheader("قسم إدارة الجودة والاعتماد (CBAHI)")
+        st.info("متابعة مستويات الأداء (SLA) وسجلات الاعتماد الإداري والتحسين المستمر للمعايير السريرية والتشغيلية.")
         col_q1, col_q2 = st.columns(2)
         with col_q1:
             st.markdown("##### التزام أوقات معالجة البلاغات (SLA)")
@@ -304,53 +330,62 @@ try:
             st.success(f"تم توثيق القرار واعتماده نظامياً: ({decision_input})")
             log_action(user["username"], "اعتماد قرار جودة", decision_input)
 
-    elif user["role"] in ["it_lead", "system_admin"]:
-        check_authorization(["it_lead", "system_admin"], user["role"])
-        st.subheader("بوابة الإدارة التقنية والتشغيلية")
+    elif role == "ehealth_mgr":
+        st.subheader("قسم إدارة الصحة الإلكترونية (E-Health)")
+        st.info("مراقبة التكامل مع الأنظمة المركزية لوزارة الصحة والربط السريري (الملف الطبي الموحد).")
         
-        sub_tabs = [
-            "إدارة الصحة الإلكترونية (E-Health)",
-            "قسم الدعم الفني (Technical Support)",
-            "قسم البنية التحتية والشبكات (Infrastructure)",
-            "قسم الأنظمة والتطبيقات (Systems & Apps)"
-        ]
-        sub_choice = st.selectbox("اختر القسم الفرعي لتقنية المعلومات:", sub_tabs)
+        # مؤشرات وعرض إحصائي دقيق مع إمكانية التصدير والسحب
+        ehealth_df = pd.DataFrame({
+            'مؤشر التكامل': ["الربط المركزي", "السجلات الطبية", "نظام PACS"],
+            'معدل النجاح %': [99.5, 99.1, 99.8],
+            'الحالة التشغيلية': ["مستقر", "مستقر", "مراقب استباقياً"]
+        })
+        st.dataframe(ehealth_df, use_container_width=True)
         
-        if "الصحة الإلكترونية" in sub_choice:
-            st.markdown("### إدارة الصحة الإلكترونية")
-            st.info("مراقبة التكامل مع الأنظمة المركزية لوزارة الصحة والربط السريري.")
-            st.bar_chart(pd.DataFrame({'معدل التكامل %': [99.5, 99.1, 99.8]}, index=["الربط المركزي", "السجلات الطبية", "PACS"]))
+        # زر محاكاة سحب وتحميل الإحصائيات كملف Excel / CSV
+        csv_data = ehealth_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 سحب وتحميل تقرير الإحصائيات الشامل (CSV/Excel)",
+            data=csv_data,
+            file_name="EHealth_Integration_Report.csv",
+            mime="text/csv",
+        )
 
-        elif "الدعم الفني" in sub_choice:
-            st.markdown("### قسم الدعم الفني وتذاكر الصيانة")
-            contractor = st.text_input("اسم شركة الصيانة المقاولة المعتمدة:")
-            if contractor:
-                st.success(f"تمت مطابقة وتوجيه البلاغات آلياً إلى شركة الصيانة: {contractor}")
+    elif role == "infra_mgr":
+        st.subheader("قسم البنية التحتية والشبكات (Infrastructure)")
+        st.info("متابعة كفاءة السيرفرات، غرف الخوادم، وموثوقية الشبكة الداخلية والخارجية.")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.bar_chart(pd.DataFrame({'جاهزية السيرفرات %': [99.9, 98.8, 99.7]}, index=["Core-01", "Core-02", "Backup"]))
+        with col2:
+            st.line_chart(pd.DataFrame({"حمل الشبكة": [30, 60, 85, 50, 40]}, index=["8AM", "12PM", "3PM", "6PM", "10PM"]))
+
+    elif role == "systems_mgr":
+        st.subheader("قسم الأنظمة والتطبيقات (Systems & Apps)")
+        st.info("إدارة وتوافر الأنظمة الطبية والإدارية ومتابعة تقارير رصد الأخطاء البرمجية.")
+        st.table(pd.DataFrame({
+            "النظام": ["النظام الطبي الموحد", "إدارة المواعيد", "مختبر LIS"],
+            "الحالة": ["مستقر وآمن", "مستقر", "مراقب استباقياً"],
+            "التصنيف الأمني": ["محمي (TLS)", "محمي (TLS)", "محمي (TLS)"]
+        }))
+
+    elif role == "helpdesk":
+        st.subheader("قسم الدعم الفني وتذاكر الصيانة (Helpdesk)")
+        contractor = st.text_input("اسم شركة الصيانة المقاولة المعتمدة:")
+        if contractor:
+            st.success(f"تمت مطابقة وتوجيه البلاغات آلياً إلى شركة الصيانة: {contractor}")
+        st.dataframe(get_tickets_df(search_term=search_q), use_container_width=True)
+
+    elif role == "system_admin":
+        st.subheader("لوحة التحكم الشاملة للمسؤول التقني (System Admin)")
+        tab_adm1, tab_adm2 = st.tabs(["إدارة كافة تذاكر النظام", "سجل التدقيق الأمني (Immutable Audit Logs)"])
+        with tab_adm1:
             st.dataframe(get_tickets_df(search_term=search_q), use_container_width=True)
-
-        elif "البنية التحتية" in sub_choice:
-            st.markdown("### البنية التحتية والشبكات")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.bar_chart(pd.DataFrame({'جاهزية السيرفرات %': [99.9, 98.8, 99.7]}, index=["Core-01", "Core-02", "Backup"]))
-            with col2:
-                st.line_chart(pd.DataFrame({"حمل الشبكة": [30, 60, 85, 50, 40]}, index=["8AM", "12PM", "3PM", "6PM", "10PM"]))
-
-        elif "الأنظمة والتطبيقات" in sub_choice:
-            st.markdown("### الأنظمة والتطبيقات")
-            st.table(pd.DataFrame({
-                "النظام": ["النظام الطبي الموحد", "إدارة المواعيد", "مختبر LIS"],
-                "الحالة": ["مستقر وآمن", "مستقر", "مراقب استباقياً"],
-                "التصنيف الأمني": ["محمي (TLS)", "محمي (TLS)", "محمي (TLS)"]
-            }))
-
-        if user["role"] == "system_admin":
-            st.markdown("---")
-            with st.expander("سجل التدقيق الأمني السيبراني غير القابل للتلاعب (Immutable Audit Logs - NCA Requirement)"):
-                engine = get_engine()
-                with engine.begin() as conn:
-                    audit_df = pd.read_sql_query("SELECT * FROM audit_log ORDER BY ts DESC LIMIT 100", conn)
-                st.dataframe(audit_df, use_container_width=True)
+        with tab_adm2:
+            engine = get_engine()
+            with engine.begin() as conn:
+                audit_df = pd.read_sql_query("SELECT * FROM audit_log ORDER BY ts DESC LIMIT 100", conn)
+            st.dataframe(audit_df, use_container_width=True)
 
 except PermissionError as pe:
     st.error(str(pe))
