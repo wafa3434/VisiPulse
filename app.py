@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import time
 import uuid
 from datetime import datetime, timedelta
@@ -168,10 +167,6 @@ def verify_login(username: str, password: str):
         safe_execute("UPDATE users SET failed_attempts = :a WHERE username = :u", {"a": attempts, "u": username})
     return None, "كلمة المرور أو اسم المستخدم غير صحيح."
 
-def check_authorization(required_roles: list[str], user_role: str):
-    if user_role not in required_roles and user_role != "system_admin":
-        raise PermissionError("خطأ أمني: لا تملك الصلاحية التقنية لتنفيذ هذه العملية.")
-
 def create_ticket(dept, dev, loc, typ, desc, pri, created_by, user_role):
     tid = "TCK-" + uuid.uuid4().hex[:8].upper()
     safe_execute(
@@ -221,8 +216,8 @@ t = {
 }
 lang_key = "العربية" if selected_lang == "العربية" else "English"
 
-# رابط الشعار المباشر من GitHub
-LOGO_URL = "https://raw.githubusercontent.com/Wafaa-Aglan/VisiPulse/main/logo.jpeg"
+# رابط الشعار الخام المباشر الصحيح
+LOGO_URL = "https://raw.githubusercontent.com/wafa3434/VisiPulse/main/logo.jpeg"
 
 if "last_activity" not in st.session_state:
     st.session_state.last_activity = time.time()
@@ -334,7 +329,6 @@ try:
         st.subheader("قسم إدارة الصحة الإلكترونية (E-Health)")
         st.info("مراقبة التكامل مع الأنظمة المركزية لوزارة الصحة والربط السريري (الملف الطبي الموحد).")
         
-        # مؤشرات وعرض إحصائي دقيق مع إمكانية التصدير والسحب
         ehealth_df = pd.DataFrame({
             'مؤشر التكامل': ["الربط المركزي", "السجلات الطبية", "نظام PACS"],
             'معدل النجاح %': [99.5, 99.1, 99.8],
@@ -342,7 +336,6 @@ try:
         })
         st.dataframe(ehealth_df, use_container_width=True)
         
-        # زر محاكاة سحب وتحميل الإحصائيات كملف Excel / CSV
         csv_data = ehealth_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="📥 سحب وتحميل تقرير الإحصائيات الشامل (CSV/Excel)",
